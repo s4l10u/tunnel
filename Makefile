@@ -140,8 +140,8 @@ release: ## Build release assets (usage: make release VERSION=v1.2.0)
 	@echo "✅ Release $(VERSION) built successfully"
 
 github-release: ## Create GitHub release (requires gh CLI)
-	@if [ ! -d "release" ]; then \
-		echo "❌ Error: No release directory found. Run 'make release VERSION=vX.X.X' first"; \
+	@if [ ! -d "artifacts" ]; then \
+		echo "❌ Error: No artifacts directory found. Run 'make release VERSION=vX.X.X' first"; \
 		exit 1; \
 	fi
 	@if ! command -v gh &> /dev/null; then \
@@ -149,9 +149,9 @@ github-release: ## Create GitHub release (requires gh CLI)
 		exit 1; \
 	fi
 	@echo "Creating GitHub release..."
-	@VERSION=$$(ls release/tunnel-*.tar.gz | head -1 | sed -E 's/.*tunnel-(.+)-linux-amd64.tar.gz/\1/'); \
+	@VERSION=$$(ls artifacts/tunnel-*.tar.gz | head -1 | sed -E 's/.*tunnel-(.+)-linux-amd64.tar.gz/\1/'); \
 	git add . && git commit -m "Release $$VERSION" && git push && \
-	gh release create $$VERSION release/* --title "Tunnel System $$VERSION" --notes-file release/RELEASE_NOTES.md
+	gh release create $$VERSION artifacts/* --title "Tunnel System $$VERSION" --notes-file artifacts/RELEASE_NOTES.md
 	@echo "✅ GitHub release created successfully"
 
 # Project info

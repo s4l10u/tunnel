@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 VERSION=${1:-"v1.0.0"}
-BUILD_DIR="release"
+BUILD_DIR="artifacts"
 LDFLAGS="-s -w -X main.version=$VERSION"
 
 # Functions
@@ -145,11 +145,6 @@ copy_installation_files() {
     # Copy documentation
     cp README.md "$BUILD_DIR/"
     cp docs/TLS-SETUP.md "$BUILD_DIR/" 2>/dev/null || true
-    
-    # Copy example configurations
-    mkdir -p "$BUILD_DIR/examples"
-    cp docker-compose.yml "$BUILD_DIR/examples/"
-    cp -r k8s "$BUILD_DIR/examples/"
     
     log_success "Copied installation files and documentation"
 }
@@ -477,8 +472,6 @@ sha256sum -c checksums.txt
 
 - [Installation Guide](README.md)
 - [TLS Setup](TLS-SETUP.md)
-- [Kubernetes Deployment](examples/k8s/)
-- [Docker Compose](examples/docker-compose.yml)
 
 ## 🆕 What's New in $VERSION
 
