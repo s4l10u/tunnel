@@ -90,4 +90,11 @@ TUNNEL_USE_IMPROVED=true
 # - Use strong, unique tokens for production
 # - Regularly rotate authentication tokens
 # - Use TLS certificates in production environments
-# - Ensure certificate files have proper permissions (644 for cert, 600 for key)
+# - Certificate file permissions: 644 (readable by all)
+# - Private key permissions: 640 (readable by tunnel-server group only)
+# - Certificate ownership: root:tunnel-server
+# 
+# Manual permission fix if needed:
+# sudo chmod 644 /etc/tunnel-server/certs/server.crt
+# sudo chmod 640 /etc/tunnel-server/certs/server.key
+# sudo chown root:tunnel-server /etc/tunnel-server/certs/server.*

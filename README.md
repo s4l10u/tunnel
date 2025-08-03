@@ -260,6 +260,17 @@ kubectl edit configmap tunnel-config -n tunnel-system
    sudo chown tunnel:tunnel /opt/tunnel-client/bin/tunnel-client-linux
    ```
 
+4. **Certificate Permission Errors**
+   ```bash
+   # Fix server certificate permissions
+   sudo chmod 644 /etc/tunnel-server/certs/server.crt
+   sudo chmod 640 /etc/tunnel-server/certs/server.key
+   sudo chown root:tunnel-server /etc/tunnel-server/certs/server.*
+   
+   # Restart service after fixing permissions
+   sudo systemctl restart tunnel-server
+   ```
+
 ## 🔧 Supported Platforms
 
 | Platform | Architecture | Status |

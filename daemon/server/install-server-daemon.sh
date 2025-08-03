@@ -186,16 +186,29 @@ IP.2 = $SERVER_IP
 EOF
         )
         
-        # Set proper permissions
+        # Set proper permissions for tunnel server to read certificates
         chmod 644 "$CERTS_DIR/server.crt"
-        chmod 600 "$CERTS_DIR/server.key"
-        chown root:root "$CERTS_DIR/server.crt" "$CERTS_DIR/server.key"
+        chmod 640 "$CERTS_DIR/server.key"
+        chown root:$GROUP "$CERTS_DIR/server.crt" "$CERTS_DIR/server.key"
         
         log_success "Generated self-signed certificates for $SERVER_IP"
         log_info "Certificate: $CERTS_DIR/server.crt"
         log_info "Private key: $CERTS_DIR/server.key"
     else
         log_info "Certificates already exist in $CERTS_DIR"
+        
+        # Ensure existing certificates have correct permissions
+        if [[ -f "$CERTS_DIR/server.crt" ]]; then
+            chmod 644 "$CERTS_DIR/server.crt"
+            chown root:$GROUP "$CERTS_DIR/server.crt"
+            log_info "Updated certificate permissions"
+        fi
+        
+        if [[ -f "$CERTS_DIR/server.key" ]]; then
+            chmod 640 "$CERTS_DIR/server.key"
+            chown root:$GROUP "$CERTS_DIR/server.key"
+            log_info "Updated private key permissions"
+        fi
     fi
 }
 

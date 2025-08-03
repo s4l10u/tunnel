@@ -133,9 +133,26 @@ tunnel/
 
 ### **Server Configuration**
 - **Port**: 8443 (WebSocket tunnel endpoint)
-- **Exposed Ports**: 6443 (Kubernetes API)
+- **Configurable Ports**: All TCP forwarder ports can be customized via environment variables
 - **Authentication**: Token-based
 - **TLS**: Optional (recommended for production)
+
+#### **Port Configuration**
+```bash
+# Default ports (can be overridden in /etc/tunnel-server/config)
+TUNNEL_WEB_PORT=8080       # Web application tunnel
+TUNNEL_DB_PORT=5432        # Database tunnel
+TUNNEL_SSH_PORT=2222       # SSH tunnel
+TUNNEL_MONGO_PORT=27017    # MongoDB tunnel
+TUNNEL_K8S_PORT=6443       # Kubernetes API tunnel
+
+# Enable/disable specific forwarders
+TUNNEL_ENABLE_WEB=true
+TUNNEL_ENABLE_DB=true
+TUNNEL_ENABLE_SSH=true
+TUNNEL_ENABLE_MONGO=true
+TUNNEL_ENABLE_K8S=true     # Set to false if running on K8s master
+```
 
 ### **Client Configuration**
 - **Connection**: Connects to `wss://server:8443/tunnel`
@@ -318,12 +335,30 @@ make logs
 
 ## 📄 License
 
-This project is part of the Internal Developer Platform (IDP) and follows the same licensing terms.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
-1. Follow Go conventions and best practices
-2. Add tests for new features
-3. Update documentation
-4. Ensure security standards are maintained# tunnel
-# tunnel
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Setting up the development environment
+- Code style and conventions
+- Submitting pull requests
+- Reporting issues
+
+### Quick Contributing Steps
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📞 Support
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/s4l10u/tunnel/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/s4l10u/tunnel/discussions)
+- 📖 **Documentation**: [README](README.md) and [docs/](docs/)
+
+## ⭐ Acknowledgments
+
+Thanks to all contributors who help make this project better!

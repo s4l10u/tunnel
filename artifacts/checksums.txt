@@ -1,7 +1,7 @@
-489d44d0d4c4616703627ba40aba49c0a65e2e9c55ab8405195f92eb2cf0aff8  tunnel-v1.0.0-darwin-amd64.tar.gz
-d3f11c51170f9f5161687fae4f1af20e3ee35e5752e474d9146616ed4e1de093  tunnel-v1.0.0-darwin-arm64.tar.gz
-aa92bef36a9424ef8601c04af958d20c33aadc62739f35010a61af4ed98663a9  tunnel-v1.0.0-linux-386.tar.gz
-e5675a45a60cd2d0a8a6081262c127bece7d911eaa7fef98d9a791f3b313a02f  tunnel-v1.0.0-linux-amd64.tar.gz
-ea40efafe28dc87e94afe80164228fc53953fa11cd3a4e78667bc4c7ef85d188  tunnel-v1.0.0-linux-arm64.tar.gz
-6fc38b9c80d0af702486261fec0fa0bd3ffd0b43b0ab04fa254718c9683cea85  tunnel-v1.0.0-windows-386.zip
-49a84a2a800806fcf8bea1f0a3ec51090c5598c1fba8fa9294a3f1ee263c962f  tunnel-v1.0.0-windows-amd64.zip
+728248bee410657e3898c55bc433e529f8acce70448417d816b39c3c8f8ef28f  tunnel-v1.1.0-darwin-amd64.tar.gz
+19596233bfb4468bc0df601a62cb846265b071b2ccd81718f6f7d58eeb8fadb7  tunnel-v1.1.0-darwin-arm64.tar.gz
+a624b98c9f42e2aac0a8bba591bded6cc0f5e5e1944317739a6669a8365f7d83  tunnel-v1.1.0-linux-386.tar.gz
+4a8b1b755f803bcb25f292f3bcf9ad16302d2e7d4afc75fe24c15000b367f89d  tunnel-v1.1.0-linux-amd64.tar.gz
+d226c1121d2627981fc44aa46af39d9b4eb6c531025722e5d410336c0d17200b  tunnel-v1.1.0-linux-arm64.tar.gz
+4b259189edc7eef64a7cdeb1060d511bae119bf19263acd1f47fef6f2b8e260c  tunnel-v1.1.0-windows-386.zip
+1a39e681f8c570c3436fcb41a4fb8bf24710677c86b81609079990ca83ef2c22  tunnel-v1.1.0-windows-amd64.zip
