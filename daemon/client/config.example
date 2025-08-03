@@ -1,0 +1,87 @@
+# Tunnel Client Daemon Configuration
+# Copy this file to /etc/tunnel-client/config and customize for your environment
+
+# =============================================================================
+# REQUIRED SETTINGS
+# =============================================================================
+
+# Tunnel server URL
+# Use wss:// for TLS/SSL encrypted connections (recommended)
+# Use ws:// only for development without encryption
+TUNNEL_SERVER_URL=wss://tunnel-server.example.com:8443/tunnel
+
+# Authentication token
+# Must match the token configured on the tunnel server
+TUNNEL_TOKEN=your-production-token-here
+
+# Port forwarding configuration
+# Format: localPort:remoteHost:remotePort
+# Examples:
+#   Kubernetes API: 6443:kubernetes.default.svc.cluster.local:443
+#   Web app: 8080:webapp:80
+#   Database: 5432:database:5432
+#   SSH: 2222:ssh-server:22
+#   MongoDB: 27017:mongodb:27017
+TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443
+
+# Client ID (must be unique and match server configuration)
+# Examples: airgap-k8s-api, airgap-web, airgap-db, airgap-ssh
+TUNNEL_CLIENT_ID=airgap-k8s-api
+
+# =============================================================================
+# TLS/SSL SETTINGS
+# =============================================================================
+
+# Skip TLS certificate verification
+# - Set to false for production with valid certificates (recommended)
+# - Set to true for development with self-signed certificates
+# - Never use true in production environments
+TUNNEL_SKIP_VERIFY=false
+
+# Custom CA certificate file (optional)
+# Path to a custom CA certificate file for validation
+# Useful when using private/internal CA certificates
+# TUNNEL_CA_CERT=/etc/tunnel-client/ca.crt
+
+# =============================================================================
+# OPTIONAL SETTINGS
+# =============================================================================
+
+# Use improved implementation (recommended)
+TUNNEL_USE_IMPROVED=true
+
+# Show connection metrics in logs
+TUNNEL_SHOW_METRICS=true
+
+# =============================================================================
+# COMMON CONFIGURATIONS
+# =============================================================================
+
+# For Kubernetes API Server tunneling:
+# TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443
+# TUNNEL_CLIENT_ID=airgap-k8s-api
+
+# For web application tunneling:
+# TUNNEL_FORWARD=8080:webapp:80
+# TUNNEL_CLIENT_ID=airgap-web
+
+# For database tunneling:
+# TUNNEL_FORWARD=5432:database:5432
+# TUNNEL_CLIENT_ID=airgap-db
+
+# For SSH tunneling:
+# TUNNEL_FORWARD=2222:ssh-server:22
+# TUNNEL_CLIENT_ID=airgap-ssh
+
+# For MongoDB tunneling:
+# TUNNEL_FORWARD=27017:mongodb:27017
+# TUNNEL_CLIENT_ID=airgap-mongodb
+
+# =============================================================================
+# SECURITY NOTES
+# =============================================================================
+# - Keep this file secure with proper permissions (640)
+# - Never commit tokens to version control
+# - Use strong, unique tokens for production
+# - Regularly rotate authentication tokens
+# - Use TLS certificates in production environments

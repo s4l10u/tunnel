@@ -1,0 +1,47 @@
+[Unit]
+Description=Air-gapped Tunnel Server
+Documentation=https://github.com/idp/tunnel
+After=network.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=tunnel-server
+Group=tunnel-server
+WorkingDirectory=/opt/tunnel-server
+ExecStart=/bin/bash -c '/opt/tunnel-server/bin/tunnel-server-linux -listen="$TUNNEL_LISTEN_ADDR" -token="$TUNNEL_TOKEN" -cert="$TUNNEL_CERT_PATH" -key="$TUNNEL_KEY_PATH" -improved="$TUNNEL_USE_IMPROVED"'
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+KillMode=process
+KillSignal=SIGTERM
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/tunnel-server/logs
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Environment file
+EnvironmentFile=-/etc/tunnel-server/config
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tunnel-server
+
+[Install]
+WantedBy=multi-user.target

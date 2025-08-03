@@ -1,0 +1,63 @@
+# Tunnel Server Daemon Configuration
+# Copy this file to /etc/tunnel-server/config and customize for your environment
+
+# =============================================================================
+# REQUIRED SETTINGS
+# =============================================================================
+
+# Listen address and port
+# Use :8443 for all interfaces, or specify IP:PORT for specific interface
+TUNNEL_LISTEN_ADDR=:8443
+
+# Authentication token
+# Must match the token configured on tunnel clients
+# Use a strong, random token for production
+TUNNEL_TOKEN=your-production-token-here
+
+# =============================================================================
+# TLS/SSL SETTINGS
+# =============================================================================
+
+# TLS certificate file path
+# Leave empty to run without TLS (not recommended for production)
+# For Let's Encrypt: /etc/letsencrypt/live/your-domain.com/fullchain.pem
+# For self-signed: /etc/tunnel-server/certs/server.crt
+TUNNEL_CERT_PATH=/etc/tunnel-server/certs/server.crt
+
+# TLS private key file path
+# For Let's Encrypt: /etc/letsencrypt/live/your-domain.com/privkey.pem
+# For self-signed: /etc/tunnel-server/certs/server.key
+TUNNEL_KEY_PATH=/etc/tunnel-server/certs/server.key
+
+# =============================================================================
+# OPTIONAL SETTINGS
+# =============================================================================
+
+# Use improved implementation (recommended)
+TUNNEL_USE_IMPROVED=true
+
+# =============================================================================
+# COMMON CONFIGURATIONS
+# =============================================================================
+
+# Production with Let's Encrypt:
+# TUNNEL_CERT_PATH=/etc/letsencrypt/live/your-domain.com/fullchain.pem
+# TUNNEL_KEY_PATH=/etc/letsencrypt/live/your-domain.com/privkey.pem
+
+# Development without TLS:
+# TUNNEL_CERT_PATH=
+# TUNNEL_KEY_PATH=
+
+# Custom domain with self-signed certificates:
+# TUNNEL_CERT_PATH=/etc/tunnel-server/certs/server.crt
+# TUNNEL_KEY_PATH=/etc/tunnel-server/certs/server.key
+
+# =============================================================================
+# SECURITY NOTES
+# =============================================================================
+# - Keep this file secure with proper permissions (640)
+# - Never commit tokens to version control
+# - Use strong, unique tokens for production
+# - Regularly rotate authentication tokens
+# - Use TLS certificates in production environments
+# - Ensure certificate files have proper permissions (644 for cert, 600 for key)

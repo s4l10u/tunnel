@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tunnel-system
+  labels:
+    name: tunnel-system
+    app.kubernetes.io/name: tunnel-system
+    app.kubernetes.io/component: air-gapped-tunnel

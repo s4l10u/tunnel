@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air-Gapped Web Application</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+        h1 {
+            color: #4CAF50;
+            margin-bottom: 1rem;
+        }
+        .status {
+            background-color: #3a3a3a;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        .indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .info {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #3a3a3a;
+            border-left: 4px solid #2196F3;
+            text-align: left;
+        }
+        code {
+            background-color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Air-Gapped Application</h1>
+        
+        <div class="status">
+            <span class="indicator"></span>
+            <strong>Status:</strong> Connected via Secure Tunnel
+        </div>
+        
+        <p>This web application is running in an isolated, air-gapped network.</p>
+        <p>You are accessing it through a secure WebSocket tunnel.</p>
+        
+        <div class="info">
+            <h3>Connection Details:</h3>
+            <p><strong>Network:</strong> <code>172.21.0.0/24</code> (Air-gapped)</p>
+            <p><strong>Access Method:</strong> Reverse tunnel initiated from inside</p>
+            <p><strong>Security:</strong> Token-based authentication</p>
+            <p><strong>Protocol:</strong> WebSocket over HTTP/HTTPS</p>
+        </div>
+        
+        <div class="info">
+            <h3>Available Services:</h3>
+            <ul style="text-align: left;">
+                <li>Web Application - Port 8080 → <code>webapp:80</code></li>
+                <li>PostgreSQL Database - Port 5432 → <code>database:5432</code></li>
+                <li>SSH Server - Port 2222 → <code>ssh-server:22</code></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
