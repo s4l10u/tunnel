@@ -33,19 +33,19 @@ services:
       - "27017:27017"  # MongoDB tunnel
       - "6443:6443"  # Kubernetes API server tunnel
     environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-rtxdfgrtxdfgvrtxdfgvhswvefchswvefcvhswvefc}
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
       - USE_IMPROVED=${USE_IMPROVED:-true}
       - TARGET_WEB=${TARGET_WEB:-webapp:80}
       - TARGET_DB=${TARGET_DB:-database:5432}
       - TARGET_SSH=${TARGET_SSH:-ssh-server:22}
       - TARGET_MONGODB=${TARGET_MONGODB:-ss-mongodb-0.mongodb:27017}
-      - TARGET_K8S_API=${TARGET_K8S_API:-65.109.12.158:6443}
+      - TARGET_K8S_API=${TARGET_K8S_API:-kubernetes-api-server:6443}
       - TLS_CERT_PATH=${TLS_CERT_PATH:-/certs/server.crt}
       - TLS_KEY_PATH=${TLS_KEY_PATH:-/certs/server.key}
     volumes:
       - ./certs:/certs:ro
     command:  
-      - "-token=${TUNNEL_TOKEN:-rtxdfgrtxdfgvrtxdfgvhswvefchswvefcvhswvefc}"
+      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
       - "-listen=:8443"
       - "-improved=${USE_IMPROVED:-true}"
       - "-cert=/certs/server.crt"
@@ -69,10 +69,10 @@ services:
       tunnel-server:
         condition: service_healthy
     environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
     command:
       - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}"
+      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
       - "-forward=8080:webapp:80"
       - "-id=airgap-web"
       - "-improved=${USE_IMPROVED:-true}"
@@ -90,10 +90,10 @@ services:
       tunnel-server:
         condition: service_healthy
     environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
     command:
       - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}"
+      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
       - "-forward=5432:database:5432"
       - "-id=airgap-db"
       - "-improved=${USE_IMPROVED:-true}"
@@ -111,10 +111,10 @@ services:
       tunnel-server:
         condition: service_healthy
     environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
     command:
       - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}"
+      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
       - "-forward=2222:ssh-server:22"
       - "-id=airgap-ssh"
       - "-improved=${USE_IMPROVED:-true}"
@@ -132,10 +132,10 @@ services:
       tunnel-server:
         condition: service_healthy
     environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
     command:
       - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-development-token-do-not-use-in-production}"
+      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
       - "-forward=6443:kubernetes-api:6443"
       - "-id=airgap-k8s-api"
       - "-improved=${USE_IMPROVED:-true}"

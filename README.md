@@ -318,12 +318,30 @@ make logs
 
 ## 📄 License
 
-This project is part of the Internal Developer Platform (IDP) and follows the same licensing terms.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
-1. Follow Go conventions and best practices
-2. Add tests for new features
-3. Update documentation
-4. Ensure security standards are maintained# tunnel
-# tunnel
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Setting up the development environment
+- Code style and conventions
+- Submitting pull requests
+- Reporting issues
+
+### Quick Contributing Steps
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📞 Support
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/s4l10u/tunnel/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/s4l10u/tunnel/discussions)
+- 📖 **Documentation**: [README](README.md) and [docs/](docs/)
+
+## ⭐ Acknowledgments
+
+Thanks to all contributors who help make this project better!
