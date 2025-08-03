@@ -16,18 +16,18 @@ A secure tunnel system for establishing connections between air-gapped environme
 
 **Client (Air-gapped environment):**
 ```bash
-curl -fsSL https://github.com/s4l10u/idp/releases/latest/download/install-client.sh | sudo bash
+curl -fsSL https://github.com/s4l10u/tunnel/releases/latest/download/install-client.sh | sudo bash
 ```
 
 **Server (Internet-facing):**
 ```bash
-curl -fsSL https://github.com/s4l10u/idp/releases/latest/download/install-server.sh | sudo bash
+curl -fsSL https://github.com/s4l10u/tunnel/releases/latest/download/install-server.sh | sudo bash
 ```
 
 ### **Manual Installation**
 
 #### 1. **Download Release**
-Visit [Releases](https://github.com/s4l10u/idp/releases) and download the appropriate binary for your platform.
+Visit [Releases](https://github.com/s4l10u/tunnel/releases) and download the appropriate binary for your platform.
 
 #### 2. **Extract and Install**
 ```bash
@@ -263,8 +263,8 @@ make github-release
 ```
 
 ### **Download Releases**
-- **Latest Release**: [GitHub Releases](https://github.com/s4l10u/idp/releases/latest)
-- **All Releases**: [Release History](https://github.com/s4l10u/idp/releases)
+- **Latest Release**: [GitHub Releases](https://github.com/s4l10u/tunnel/releases/latest)
+- **All Releases**: [Release History](https://github.com/s4l10u/tunnel/releases)
 
 ### **Verify Downloads**
 ```bash
