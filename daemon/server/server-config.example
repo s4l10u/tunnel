@@ -30,6 +30,26 @@ TUNNEL_CERT_PATH=/etc/tunnel-server/certs/server.crt
 TUNNEL_KEY_PATH=/etc/tunnel-server/certs/server.key
 
 # =============================================================================
+# PORT CONFIGURATION
+# =============================================================================
+
+# TCP forwarder port configuration
+# Set to 0 to disable a specific forwarder
+TUNNEL_WEB_PORT=8080
+TUNNEL_DB_PORT=5432
+TUNNEL_SSH_PORT=2222
+TUNNEL_MONGO_PORT=27017
+TUNNEL_K8S_PORT=16443
+
+# Enable/disable specific forwarders
+# Set to false to completely disable a forwarder
+TUNNEL_ENABLE_WEB=true
+TUNNEL_ENABLE_DB=true
+TUNNEL_ENABLE_SSH=true
+TUNNEL_ENABLE_MONGO=true
+TUNNEL_ENABLE_K8S=false
+
+# =============================================================================
 # OPTIONAL SETTINGS
 # =============================================================================
 
@@ -51,6 +71,16 @@ TUNNEL_USE_IMPROVED=true
 # Custom domain with self-signed certificates:
 # TUNNEL_CERT_PATH=/etc/tunnel-server/certs/server.crt
 # TUNNEL_KEY_PATH=/etc/tunnel-server/certs/server.key
+
+# Running on Kubernetes master node (disable K8s forwarder):
+# TUNNEL_ENABLE_K8S=false
+# TUNNEL_K8S_PORT=16443
+
+# Custom port configuration for specific services:
+# TUNNEL_WEB_PORT=18080
+# TUNNEL_DB_PORT=15432
+# TUNNEL_SSH_PORT=12222
+# TUNNEL_MONGO_PORT=127017
 
 # =============================================================================
 # SECURITY NOTES

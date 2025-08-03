@@ -1,6 +1,6 @@
 [Unit]
 Description=Air-gapped Tunnel Server
-Documentation=https://github.com/idp/tunnel
+Documentation=https://github.com/s4l10u/tunnel
 After=network.target
 Wants=network-online.target
 StartLimitIntervalSec=300

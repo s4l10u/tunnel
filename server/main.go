@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -22,6 +23,28 @@ var (
 	authToken   = flag.String("token", "", "Authentication token (required)")
 	useImproved = flag.Bool("improved", true, "Use improved implementation with better reliability")
 )
+
+// getEnvAsInt reads an environment variable and converts it to int, returns defaultValue if not set or invalid
+func getEnvAsInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+		log.Printf("Warning: Invalid value for %s: %s, using default %d", key, value, defaultValue)
+	}
+	return defaultValue
+}
+
+// getEnvAsBool reads an environment variable and converts it to bool, returns defaultValue if not set or invalid
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
+		}
+		log.Printf("Warning: Invalid value for %s: %s, using default %t", key, value, defaultValue)
+	}
+	return defaultValue
+}
 
 func main() {
 	flag.Parse()
@@ -52,35 +75,59 @@ func main() {
 			w.Write([]byte(`{"status":"healthy","implementation":"improved"}`))
 		})
 		
+		// Configure TCP forwarder ports via environment variables
+		webPort := getEnvAsInt("TUNNEL_WEB_PORT", 8080)
+		dbPort := getEnvAsInt("TUNNEL_DB_PORT", 5432)
+		sshPort := getEnvAsInt("TUNNEL_SSH_PORT", 2222)
+		mongoPort := getEnvAsInt("TUNNEL_MONGO_PORT", 27017)
+		k8sPort := getEnvAsInt("TUNNEL_K8S_PORT", 6443)
+		
+		// Control which forwarders to enable
+		enableWeb := getEnvAsBool("TUNNEL_ENABLE_WEB", true)
+		enableDB := getEnvAsBool("TUNNEL_ENABLE_DB", true)
+		enableSSH := getEnvAsBool("TUNNEL_ENABLE_SSH", true)
+		enableMongo := getEnvAsBool("TUNNEL_ENABLE_MONGO", true)
+		enableK8s := getEnvAsBool("TUNNEL_ENABLE_K8S", true)
+		
 		// Start TCP forwarding listeners with error handling
-		if err := server.StartTCPForwarder(8080, "airgap-web"); err != nil {
-			logger.Error("Failed to start web forwarder", zap.Error(err))
-		} else {
-			logger.Info("Started TCP forwarder", zap.Int("port", 8080), zap.String("service", "web"))
+		if enableWeb {
+			if err := server.StartTCPForwarder(webPort, "airgap-web"); err != nil {
+				logger.Error("Failed to start web forwarder", zap.Int("port", webPort), zap.Error(err))
+			} else {
+				logger.Info("Started TCP forwarder", zap.Int("port", webPort), zap.String("service", "web"))
+			}
 		}
 		
-		if err := server.StartTCPForwarder(5432, "airgap-db"); err != nil {
-			logger.Error("Failed to start database forwarder", zap.Error(err))
-		} else {
-			logger.Info("Started TCP forwarder", zap.Int("port", 5432), zap.String("service", "database"))
+		if enableDB {
+			if err := server.StartTCPForwarder(dbPort, "airgap-db"); err != nil {
+				logger.Error("Failed to start database forwarder", zap.Int("port", dbPort), zap.Error(err))
+			} else {
+				logger.Info("Started TCP forwarder", zap.Int("port", dbPort), zap.String("service", "database"))
+			}
 		}
 		
-		if err := server.StartTCPForwarder(2222, "airgap-ssh"); err != nil {
-			logger.Error("Failed to start SSH forwarder", zap.Error(err))
-		} else {
-			logger.Info("Started TCP forwarder", zap.Int("port", 2222), zap.String("service", "ssh"))
+		if enableSSH {
+			if err := server.StartTCPForwarder(sshPort, "airgap-ssh"); err != nil {
+				logger.Error("Failed to start SSH forwarder", zap.Int("port", sshPort), zap.Error(err))
+			} else {
+				logger.Info("Started TCP forwarder", zap.Int("port", sshPort), zap.String("service", "ssh"))
+			}
 		}
 		
-		if err := server.StartTCPForwarder(27017, "airgap-mongodb"); err != nil {
-			logger.Error("Failed to start MongoDB forwarder", zap.Error(err))
-		} else {
-			logger.Info("Started TCP forwarder", zap.Int("port", 27017), zap.String("service", "mongodb"))
+		if enableMongo {
+			if err := server.StartTCPForwarder(mongoPort, "airgap-mongodb"); err != nil {
+				logger.Error("Failed to start MongoDB forwarder", zap.Int("port", mongoPort), zap.Error(err))
+			} else {
+				logger.Info("Started TCP forwarder", zap.Int("port", mongoPort), zap.String("service", "mongodb"))
+			}
 		}
 		
-		if err := server.StartTCPForwarder(6443, "airgap-k8s-api"); err != nil {
-			logger.Error("Failed to start Kubernetes API server forwarder", zap.Error(err))
-		} else {
-			logger.Info("Started TCP forwarder", zap.Int("port", 6443), zap.String("service", "kubernetes-api"))
+		if enableK8s {
+			if err := server.StartTCPForwarder(k8sPort, "airgap-k8s-api"); err != nil {
+				logger.Warn("Kubernetes API forwarder not started (port may be in use)", zap.Int("port", k8sPort), zap.Error(err))
+			} else {
+				logger.Info("Started TCP forwarder", zap.Int("port", k8sPort), zap.String("service", "kubernetes-api"))
+			}
 		}
 	} else {
 		logger.Info("Using original tunnel server implementation")

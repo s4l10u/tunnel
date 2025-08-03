@@ -133,9 +133,26 @@ tunnel/
 
 ### **Server Configuration**
 - **Port**: 8443 (WebSocket tunnel endpoint)
-- **Exposed Ports**: 6443 (Kubernetes API)
+- **Configurable Ports**: All TCP forwarder ports can be customized via environment variables
 - **Authentication**: Token-based
 - **TLS**: Optional (recommended for production)
+
+#### **Port Configuration**
+```bash
+# Default ports (can be overridden in /etc/tunnel-server/config)
+TUNNEL_WEB_PORT=8080       # Web application tunnel
+TUNNEL_DB_PORT=5432        # Database tunnel
+TUNNEL_SSH_PORT=2222       # SSH tunnel
+TUNNEL_MONGO_PORT=27017    # MongoDB tunnel
+TUNNEL_K8S_PORT=6443       # Kubernetes API tunnel
+
+# Enable/disable specific forwarders
+TUNNEL_ENABLE_WEB=true
+TUNNEL_ENABLE_DB=true
+TUNNEL_ENABLE_SSH=true
+TUNNEL_ENABLE_MONGO=true
+TUNNEL_ENABLE_K8S=true     # Set to false if running on K8s master
+```
 
 ### **Client Configuration**
 - **Connection**: Connects to `wss://server:8443/tunnel`
