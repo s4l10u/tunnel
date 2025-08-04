@@ -4,16 +4,19 @@ import (
 	"context"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/idp/tunnel/pkg/tunnel"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -22,7 +25,40 @@ var (
 	keyFile     = flag.String("key", "", "TLS key file")
 	authToken   = flag.String("token", "", "Authentication token (required)")
 	useImproved = flag.Bool("improved", true, "Use improved implementation with better reliability")
+	configFile  = flag.String("config", getConfigPath(), "Configuration file path")
 )
+
+type ForwarderConfig struct {
+	Name          string `yaml:"name"`
+	Port          int    `yaml:"port"`
+	Target        string `yaml:"target"`
+	ClientID      string `yaml:"client_id"`
+	Enabled       bool   `yaml:"enabled"`
+	Description   string `yaml:"description"`
+	WarningOnFail bool   `yaml:"warning_on_fail"`
+}
+
+type ServerConfig struct {
+	Listen   string `yaml:"listen"`
+	Token    string `yaml:"token"`
+	Improved bool   `yaml:"improved"`
+	TLS      struct {
+		Cert string `yaml:"cert"`
+		Key  string `yaml:"key"`
+	} `yaml:"tls"`
+}
+
+type Config struct {
+	Server     ServerConfig      `yaml:"server"`
+	Forwarders []ForwarderConfig `yaml:"forwarders"`
+}
+
+func getConfigPath() string {
+	if path := os.Getenv("TUNNEL_CONFIG"); path != "" {
+		return path
+	}
+	return "config.yaml"
+}
 
 // getEnvAsInt reads an environment variable and converts it to int, returns defaultValue if not set or invalid
 func getEnvAsInt(key string, defaultValue int) int {
@@ -46,118 +82,220 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func main() {
-	flag.Parse()
+func expandEnvVars(s string) string {
+	return os.ExpandEnv(s)
+}
 
-	// Get auth token from env if not provided via flag
-	if *authToken == "" {
-		*authToken = os.Getenv("TUNNEL_TOKEN")
+func loadConfig(configPath string, logger *zap.Logger) (*Config, error) {
+	// Set default config
+	config := &Config{
+		Server: ServerConfig{
+			Listen:   ":8443",
+			Token:    "${TUNNEL_TOKEN}",
+			Improved: true,
+		},
 	}
 	
-	if *authToken == "" {
-		log.Fatal("Authentication token is required (use -token flag or TUNNEL_TOKEN env var)")
+	// Try to load config file
+	if _, err := os.Stat(configPath); err == nil {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+		
+		if err := yaml.Unmarshal(data, config); err != nil {
+			return nil, fmt.Errorf("failed to parse config file: %w", err)
+		}
+		
+		logger.Info("Loaded configuration from file", zap.String("path", configPath))
+	} else {
+		logger.Warn("Config file not found, using defaults", zap.String("path", configPath))
 	}
+	
+	// Expand environment variables
+	config.Server.Listen = expandEnvVars(config.Server.Listen)
+	config.Server.Token = expandEnvVars(config.Server.Token)
+	config.Server.TLS.Cert = expandEnvVars(config.Server.TLS.Cert)
+	config.Server.TLS.Key = expandEnvVars(config.Server.TLS.Key)
+	
+	for i := range config.Forwarders {
+		config.Forwarders[i].Target = expandEnvVars(config.Forwarders[i].Target)
+		config.Forwarders[i].ClientID = expandEnvVars(config.Forwarders[i].ClientID)
+		
+		// Apply environment variable overrides
+		envPrefix := fmt.Sprintf("TUNNEL_FORWARDER_%s_", strings.ToUpper(config.Forwarders[i].Name))
+		
+		if portStr := os.Getenv(envPrefix + "PORT"); portStr != "" {
+			if port, err := strconv.Atoi(portStr); err == nil {
+				config.Forwarders[i].Port = port
+			}
+		}
+		
+		if target := os.Getenv(envPrefix + "TARGET"); target != "" {
+			config.Forwarders[i].Target = target
+		}
+		
+		if enabledStr := os.Getenv(envPrefix + "ENABLED"); enabledStr != "" {
+			if enabled, err := strconv.ParseBool(enabledStr); err == nil {
+				config.Forwarders[i].Enabled = enabled
+			}
+		}
+	}
+	
+	return config, nil
+}
+
+func validatePortRange(port int) error {
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("port %d is out of valid range (1-65535)", port)
+	}
+	return nil
+}
+
+func validateConfig(config *Config, logger *zap.Logger) []ForwarderConfig {
+	var validForwarders []ForwarderConfig
+	usedPorts := make(map[int]bool)
+	
+	for _, forwarder := range config.Forwarders {
+		if !forwarder.Enabled {
+			logger.Debug("Forwarder disabled", zap.String("name", forwarder.Name))
+			continue
+		}
+		
+		if err := validatePortRange(forwarder.Port); err != nil {
+			logger.Error("Invalid port configuration", zap.String("name", forwarder.Name), zap.Error(err))
+			continue
+		}
+		
+		if usedPorts[forwarder.Port] {
+			logger.Error("Port conflict detected", zap.String("name", forwarder.Name), zap.Int("port", forwarder.Port))
+			continue
+		}
+		
+		if forwarder.Target == "" {
+			logger.Error("Target not specified", zap.String("name", forwarder.Name))
+			continue
+		}
+		
+		usedPorts[forwarder.Port] = true
+		validForwarders = append(validForwarders, forwarder)
+		logger.Info("Validated forwarder", 
+			zap.String("name", forwarder.Name),
+			zap.Int("port", forwarder.Port),
+			zap.String("target", forwarder.Target))
+	}
+	
+	return validForwarders
+}
+
+func startTCPForwarders(server any, configs []ForwarderConfig, logger *zap.Logger, useImproved bool) {
+	for _, config := range configs {
+		if useImproved {
+			if improvedServer, ok := server.(*tunnel.ImprovedServer); ok {
+				if err := improvedServer.StartTCPForwarder(config.Port, config.ClientID); err != nil {
+					if config.WarningOnFail {
+						logger.Warn("Forwarder not started (may be expected)", 
+							zap.String("name", config.Name), 
+							zap.Int("port", config.Port), 
+							zap.Error(err))
+					} else {
+						logger.Error("Failed to start forwarder", 
+							zap.String("name", config.Name), 
+							zap.Int("port", config.Port), 
+							zap.String("target", config.Target),
+							zap.Error(err))
+					}
+				} else {
+					logger.Info("Started TCP forwarder", 
+						zap.String("name", config.Name),
+						zap.Int("port", config.Port), 
+						zap.String("target", config.Target),
+						zap.String("description", config.Description))
+				}
+			}
+		} else {
+			if originalServer, ok := server.(*tunnel.Server); ok {
+				go func(config ForwarderConfig) {
+					originalServer.StartTCPForwarder(config.Port, config.ClientID)
+					logger.Info("Started TCP forwarder", 
+						zap.String("name", config.Name),
+						zap.Int("port", config.Port),
+						zap.String("target", config.Target))
+				}(config)
+			}
+		}
+	}
+}
+
+func main() {
+	flag.Parse()
 
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
+	// Load configuration
+	config, err := loadConfig(*configFile, logger)
+	if err != nil {
+		logger.Fatal("Failed to load configuration", zap.Error(err))
+	}
+	
+	// Override config with command line flags
+	if *listenAddr != ":8443" {
+		config.Server.Listen = *listenAddr
+	}
+	if *authToken != "" {
+		config.Server.Token = *authToken
+	}
+	if *certFile != "" {
+		config.Server.TLS.Cert = *certFile
+	}
+	if *keyFile != "" {
+		config.Server.TLS.Key = *keyFile
+	}
+	
+	// Validate required token
+	if config.Server.Token == "" || config.Server.Token == "${TUNNEL_TOKEN}" {
+		logger.Fatal("Authentication token is required (set in config file, -token flag, or TUNNEL_TOKEN env var)")
+	}
+
 	mux := http.NewServeMux()
 	
-	// Use improved implementation by default
-	if *useImproved {
+	// Validate and filter forwarder configurations
+	validConfigs := validateConfig(config, logger)
+	
+	// Create server instance based on implementation choice
+	var server any
+	implType := "improved"
+	if config.Server.Improved {
 		logger.Info("Using improved tunnel server implementation")
-		server := tunnel.NewImprovedServer(logger, *authToken)
-		
-		mux.HandleFunc("/tunnel", server.HandleTunnel)
-		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"healthy","implementation":"improved"}`))
-		})
-		
-		// Configure TCP forwarder ports via environment variables
-		webPort := getEnvAsInt("TUNNEL_WEB_PORT", 8080)
-		dbPort := getEnvAsInt("TUNNEL_DB_PORT", 5432)
-		sshPort := getEnvAsInt("TUNNEL_SSH_PORT", 2222)
-		mongoPort := getEnvAsInt("TUNNEL_MONGO_PORT", 27017)
-		k8sPort := getEnvAsInt("TUNNEL_K8S_PORT", 6443)
-		
-		// Control which forwarders to enable
-		enableWeb := getEnvAsBool("TUNNEL_ENABLE_WEB", true)
-		enableDB := getEnvAsBool("TUNNEL_ENABLE_DB", true)
-		enableSSH := getEnvAsBool("TUNNEL_ENABLE_SSH", true)
-		enableMongo := getEnvAsBool("TUNNEL_ENABLE_MONGO", true)
-		enableK8s := getEnvAsBool("TUNNEL_ENABLE_K8S", true)
-		
-		// Start TCP forwarding listeners with error handling
-		if enableWeb {
-			if err := server.StartTCPForwarder(webPort, "airgap-web"); err != nil {
-				logger.Error("Failed to start web forwarder", zap.Int("port", webPort), zap.Error(err))
-			} else {
-				logger.Info("Started TCP forwarder", zap.Int("port", webPort), zap.String("service", "web"))
-			}
-		}
-		
-		if enableDB {
-			if err := server.StartTCPForwarder(dbPort, "airgap-db"); err != nil {
-				logger.Error("Failed to start database forwarder", zap.Int("port", dbPort), zap.Error(err))
-			} else {
-				logger.Info("Started TCP forwarder", zap.Int("port", dbPort), zap.String("service", "database"))
-			}
-		}
-		
-		if enableSSH {
-			if err := server.StartTCPForwarder(sshPort, "airgap-ssh"); err != nil {
-				logger.Error("Failed to start SSH forwarder", zap.Int("port", sshPort), zap.Error(err))
-			} else {
-				logger.Info("Started TCP forwarder", zap.Int("port", sshPort), zap.String("service", "ssh"))
-			}
-		}
-		
-		if enableMongo {
-			if err := server.StartTCPForwarder(mongoPort, "airgap-mongodb"); err != nil {
-				logger.Error("Failed to start MongoDB forwarder", zap.Int("port", mongoPort), zap.Error(err))
-			} else {
-				logger.Info("Started TCP forwarder", zap.Int("port", mongoPort), zap.String("service", "mongodb"))
-			}
-		}
-		
-		if enableK8s {
-			if err := server.StartTCPForwarder(k8sPort, "airgap-k8s-api"); err != nil {
-				logger.Warn("Kubernetes API forwarder not started (port may be in use)", zap.Int("port", k8sPort), zap.Error(err))
-			} else {
-				logger.Info("Started TCP forwarder", zap.Int("port", k8sPort), zap.String("service", "kubernetes-api"))
-			}
-		}
+		server = tunnel.NewImprovedServer(logger, config.Server.Token)
+		mux.HandleFunc("/tunnel", server.(*tunnel.ImprovedServer).HandleTunnel)
 	} else {
 		logger.Info("Using original tunnel server implementation")
-		server := tunnel.NewServer(logger, *authToken)
-		
-		mux.HandleFunc("/tunnel", server.HandleTunnel)
-		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"healthy","implementation":"original"}`))
-		})
-		
-		// Start TCP forwarding listeners for commonly used ports
-		go server.StartTCPForwarder(8080, "airgap-web")     // Web app
-		go server.StartTCPForwarder(5432, "airgap-db")      // Database
-		go server.StartTCPForwarder(2222, "airgap-ssh")     // SSH
-		go server.StartTCPForwarder(27017, "airgap-mongodb") // MongoDB
-		go server.StartTCPForwarder(6443, "airgap-k8s-api") // Kubernetes API
+		server = tunnel.NewServer(logger, config.Server.Token)
+		mux.HandleFunc("/tunnel", server.(*tunnel.Server).HandleTunnel)
+		implType = "original"
 	}
+	
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(fmt.Sprintf(`{"status":"healthy","implementation":"%s","forwarders":%d}`, implType, len(validConfigs))))
+	})
+
+	// Start TCP forwarders using unified function
+	startTCPForwarders(server, validConfigs, logger, config.Server.Improved)
 
 	// Configure server with proper timeouts
 	srv := &http.Server{
-		Addr:         *listenAddr,
+		Addr:         config.Server.Listen,
 		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	if *certFile != "" && *keyFile != "" {
+	if config.Server.TLS.Cert != "" && config.Server.TLS.Key != "" {
 		srv.TLSConfig = &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			CipherSuites: []uint16{
@@ -186,20 +324,22 @@ func main() {
 	}()
 
 	logger.Info("Starting tunnel server", 
-		zap.String("addr", *listenAddr),
-		zap.Bool("improved", *useImproved),
-		zap.String("mongoTarget", os.Getenv("TARGET_MONGODB")))
+		zap.String("addr", config.Server.Listen),
+		zap.Bool("improved", config.Server.Improved),
+		zap.Int("forwarders", len(validConfigs)),
+		zap.String("config", *configFile))
 	
-	var err error
-	if *certFile != "" && *keyFile != "" {
-		err = srv.ListenAndServeTLS(*certFile, *keyFile)
+	var serverErr error
+	if config.Server.TLS.Cert != "" && config.Server.TLS.Key != "" {
+		serverErr = srv.ListenAndServeTLS(config.Server.TLS.Cert, config.Server.TLS.Key)
+		logger.Info("Using TLS", zap.String("cert", config.Server.TLS.Cert))
 	} else {
 		logger.Warn("Running without TLS - not recommended for production")
-		err = srv.ListenAndServe()
+		serverErr = srv.ListenAndServe()
 	}
 	
-	if err != nil && err != http.ErrServerClosed {
-		logger.Fatal("Server failed", zap.Error(err))
+	if serverErr != nil && serverErr != http.ErrServerClosed {
+		logger.Fatal("Server failed", zap.Error(serverErr))
 	}
 	
 	logger.Info("Server stopped")

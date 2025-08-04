@@ -11,7 +11,7 @@ Type=simple
 User=tunnel-server
 Group=tunnel-server
 WorkingDirectory=/opt/tunnel-server
-ExecStart=/bin/bash -c '/opt/tunnel-server/bin/tunnel-server-linux -listen="$TUNNEL_LISTEN_ADDR" -token="$TUNNEL_TOKEN" -cert="$TUNNEL_CERT_PATH" -key="$TUNNEL_KEY_PATH" -improved="$TUNNEL_USE_IMPROVED"'
+ExecStart=/opt/tunnel-server/bin/tunnel-server-linux -config=/etc/tunnel-server/config.yaml
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10
@@ -35,7 +35,10 @@ MemoryDenyWriteExecute=true
 SystemCallFilter=@system-service
 SystemCallErrorNumber=EPERM
 
-# Environment file
+# Configuration file (YAML format - recommended)
+# Falls back to environment variables if YAML config not found
+# You can override config path with: TUNNEL_CONFIG=/path/to/config.yaml
+Environment=TUNNEL_CONFIG=/etc/tunnel-server/config.yaml
 EnvironmentFile=-/etc/tunnel-server/config
 
 # Logging

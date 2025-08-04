@@ -94,13 +94,29 @@ main() {
     cd /
     rm -rf "$INSTALL_DIR"
     
-    log_success "Tunnel client installed successfully!"
+    log_success "🎉 Tunnel client installed successfully!"
     echo
-    log_info "Next steps:"
-    echo "1. Edit configuration: sudo nano /etc/tunnel-client/config"
-    echo "2. Enable service: sudo systemctl enable tunnel-client"
-    echo "3. Start service: sudo systemctl start tunnel-client"
-    echo "4. Check status: sudo systemctl status tunnel-client"
+    log_info "📋 Next steps:"
+    echo "1. 🔧 Edit configuration: sudo nano /etc/tunnel-client/config"
+    echo "   - Set TUNNEL_SERVER_URL (wss://your-server:8443/tunnel)"
+    echo "   - Set TUNNEL_TOKEN (must match server token)"
+    echo "   - Set TUNNEL_FORWARD (e.g., 8080:webapp:80)"
+    echo "   - Set TUNNEL_CLIENT_ID (e.g., airgap-web)"
+    echo "2. 🔄 Enable service: sudo systemctl enable tunnel-client"
+    echo "3. ▶️  Start service: sudo systemctl start tunnel-client"
+    echo "4. 📊 Check status: sudo systemctl status tunnel-client"
+    echo "5. 📜 View logs: sudo journalctl -u tunnel-client -f"
+    echo
+    log_info "🚀 Quick Start Example:"
+    echo "  # Edit /etc/tunnel-client/config with your settings:"
+    echo "  TUNNEL_SERVER_URL=wss://tunnel.example.com:8443/tunnel"
+    echo "  TUNNEL_TOKEN=your-production-token"
+    echo "  TUNNEL_FORWARD=8080:webapp:80"
+    echo "  TUNNEL_CLIENT_ID=airgap-web"
+    echo
+    echo "  # Then start:"
+    echo "  sudo systemctl enable tunnel-client"
+    echo "  sudo systemctl start tunnel-client"
 }
 
 main "$@"

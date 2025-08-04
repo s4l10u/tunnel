@@ -1,0 +1,67 @@
+# Tunnel Server Configuration
+server:
+  listen: ":8443"
+  token: "${TUNNEL_TOKEN}"
+  tls:
+    cert: "${TLS_CERT_PATH}"
+    key: "${TLS_KEY_PATH}"
+  improved: true
+
+# TCP Forwarders Configuration
+forwarders:
+  - name: "web"
+    port: 8080
+    target: "webapp:80"
+    client_id: "airgap-web"
+    enabled: true
+    description: "Web application tunnel"
+    
+  - name: "database"
+    port: 5432
+    target: "database:5432"
+    client_id: "airgap-db"
+    enabled: true
+    description: "PostgreSQL database tunnel"
+    
+  - name: "ssh"
+    port: 2222
+    target: "ssh-server:22"
+    client_id: "airgap-ssh"
+    enabled: true
+    description: "SSH access tunnel"
+    
+  - name: "mongodb"
+    port: 27017
+    target: "mongodb:27017"
+    client_id: "airgap-mongodb"
+    enabled: true
+    description: "MongoDB database tunnel"
+    
+  - name: "kubernetes-api"
+    port: 6443
+    target: "kubernetes-api:6443"
+    client_id: "airgap-k8s-api"
+    enabled: true
+    description: "Kubernetes API server tunnel"
+    warning_on_fail: true  # Don't error, just warn if this fails
+    
+  # NEW SERVICES - Just add them here!
+  - name: "redis"
+    port: 6379
+    target: "redis-server:6379"
+    client_id: "airgap-redis"
+    enabled: true
+    description: "Redis cache tunnel"
+    
+  - name: "elasticsearch"
+    port: 9200
+    target: "elasticsearch:9200"  
+    client_id: "airgap-elasticsearch"
+    enabled: false  # Disabled by default
+    description: "Elasticsearch search engine tunnel"
+
+# Environment variable overrides
+# Any forwarder can be overridden with environment variables:
+# TUNNEL_FORWARDER_<NAME>_PORT=9090
+# TUNNEL_FORWARDER_<NAME>_TARGET=new-target:80
+# TUNNEL_FORWARDER_<NAME>_ENABLED=false

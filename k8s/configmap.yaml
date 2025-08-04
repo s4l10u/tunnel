@@ -8,14 +8,15 @@ metadata:
     app.kubernetes.io/component: tunnel-client
 data:
   # Tunnel server URL (modify for your environment)
-  TUNNEL_SERVER_URL: "wss://your-tunnel-server.example.com:8443/tunnel"
+  TUNNEL_SERVER_URL: "wss://91.99.93.153:8443/tunnel"
   
   # Client configuration
-  SKIP_VERIFY: "false"
+  SKIP_VERIFY: "true"
   USE_IMPROVED: "true"
   SHOW_METRICS: "true"
   
   # Kubernetes API tunnel configuration
-  CLIENT_ID_K8S_API: "airgap-k8s-api"
-  FORWARD_K8S_API: "6443:kubernetes.default.svc.cluster.local:443"
+  CLIENT_ID_WEB: "airgap-web"
+  FORWARD_WEB: "8080:ingress-nginx-controller.ingress-nginx:30443"
 
+ 

@@ -1,4 +1,6 @@
-# Tunnel Server Daemon Configuration
+# Tunnel Server Daemon Configuration (LEGACY)
+# This is the legacy environment variable configuration format.
+# NEW: Use config.yaml.example for the modern YAML configuration format.
 # Copy this file to /etc/tunnel-server/config and customize for your environment
 
 # =============================================================================
@@ -30,7 +32,21 @@ TUNNEL_CERT_PATH=/etc/tunnel-server/certs/server.crt
 TUNNEL_KEY_PATH=/etc/tunnel-server/certs/server.key
 
 # =============================================================================
-# PORT CONFIGURATION
+# MIGRATION TO YAML CONFIG (RECOMMENDED)
+# =============================================================================
+# For better flexibility and easier management, consider migrating to:
+# /etc/tunnel-server/config.yaml (see config.yaml.example)
+#
+# Benefits of YAML config:
+# - Add unlimited custom services without code changes
+# - Better validation and error handling
+# - Environment variable overrides still supported
+# - More readable and maintainable
+#
+# Usage: tunnel-server -config /etc/tunnel-server/config.yaml
+
+# =============================================================================
+# LEGACY PORT CONFIGURATION (Still supported)
 # =============================================================================
 
 # TCP forwarder port configuration

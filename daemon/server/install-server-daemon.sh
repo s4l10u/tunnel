@@ -124,15 +124,33 @@ install_binary() {
 install_config() {
     log_info "Installing configuration..."
     
+    # Install new YAML config (recommended)
+    if [[ ! -f "$CONFIG_DIR/config.yaml" ]]; then
+        if [[ -f "daemon/server/config.yaml.example" ]]; then
+            cp "daemon/server/config.yaml.example" "$CONFIG_DIR/config.yaml"
+            chown root:root "$CONFIG_DIR/config.yaml"
+            chmod 640 "$CONFIG_DIR/config.yaml"
+            log_success "Created YAML configuration file: $CONFIG_DIR/config.yaml"
+            log_info "Using modern YAML configuration format (recommended)"
+        fi
+    else
+        log_info "YAML configuration file already exists: $CONFIG_DIR/config.yaml"
+    fi
+    
+    # Install legacy environment config (for backward compatibility)
     if [[ ! -f "$CONFIG_DIR/config" ]]; then
         cp "daemon/server/server-config.example" "$CONFIG_DIR/config"
         chown root:root "$CONFIG_DIR/config"
         chmod 640 "$CONFIG_DIR/config"
-        log_success "Created configuration file: $CONFIG_DIR/config"
-        log_warning "IMPORTANT: Edit $CONFIG_DIR/config with your settings before starting the service"
+        log_success "Created legacy configuration file: $CONFIG_DIR/config"
     else
-        log_info "Configuration file already exists: $CONFIG_DIR/config"
+        log_info "Legacy configuration file already exists: $CONFIG_DIR/config"
     fi
+    
+    log_warning "IMPORTANT: Choose your configuration method:"
+    log_warning "  - RECOMMENDED: Edit $CONFIG_DIR/config.yaml (modern, flexible)"
+    log_warning "  - LEGACY: Edit $CONFIG_DIR/config (environment variables)"
+    log_warning "The service will use config.yaml by default if both exist."
 }
 
 install_service() {
@@ -224,20 +242,28 @@ main() {
     install_service
     generate_certificates
     
-    log_success "Installation completed successfully!"
+    log_success "🎉 Installation completed successfully!"
     echo
-    log_info "Next steps:"
-    echo "1. Edit configuration: sudo nano $CONFIG_DIR/config"
-    echo "2. Enable service: sudo systemctl enable $SERVICE_NAME"
-    echo "3. Start service: sudo systemctl start $SERVICE_NAME"
-    echo "4. Check status: sudo systemctl status $SERVICE_NAME"
-    echo "5. View logs: sudo journalctl -u $SERVICE_NAME -f"
+    log_info "📋 Next steps:"
+    echo "1. 🔧 Edit configuration:"
+    echo "   RECOMMENDED: sudo nano $CONFIG_DIR/config.yaml"
+    echo "   LEGACY:      sudo nano $CONFIG_DIR/config"
+    echo "2. 🔄 Enable service: sudo systemctl enable $SERVICE_NAME"
+    echo "3. ▶️  Start service: sudo systemctl start $SERVICE_NAME"
+    echo "4. 📊 Check status: sudo systemctl status $SERVICE_NAME"
+    echo "5. 📜 View logs: sudo journalctl -u $SERVICE_NAME -f"
     echo
-    log_info "Certificate files:"
+    log_info "🔐 Certificate files:"
     echo "  Certificate: $CERTS_DIR/server.crt"
     echo "  Private key: $CERTS_DIR/server.key"
     echo
-    log_warning "For production, consider using Let's Encrypt certificates"
+    log_info "🌟 YAML Configuration Benefits:"
+    echo "  • Add unlimited custom services (Redis, Elasticsearch, etc.)"
+    echo "  • Environment variable overrides: TUNNEL_FORWARDER_<NAME>_PORT=9090"
+    echo "  • Better validation and descriptive error messages"
+    echo "  • Runtime service enable/disable configuration"
+    echo
+    log_warning "🔒 For production, consider using Let's Encrypt certificates"
     echo "Generate with: sudo certbot certonly --standalone -d your-domain.com"
 }
 
