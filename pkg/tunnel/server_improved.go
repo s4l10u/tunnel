@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -444,19 +443,11 @@ func (s *ImprovedServer) handleTCPConnection(conn net.Conn, clientID string, rem
 	// Determine target from forwarder configuration
 	target, exists := s.forwarders[clientID]
 	if !exists {
-		// Fallback to environment variables for backward compatibility, then localhost
-		switch clientID {
-		case "airgap-web":
-			target = getEnvOrDefault("TARGET_WEB", "webapp:80")
-		case "airgap-db":
-			target = getEnvOrDefault("TARGET_DB", "database:5432")
-		case "airgap-ssh":
-			target = getEnvOrDefault("TARGET_SSH", "ssh-server:22")
-		case "airgap-mongodb":
-			target = getEnvOrDefault("TARGET_MONGODB", "mongodb:27017")
-		default:
-			target = fmt.Sprintf("localhost:%d", remotePort)
-		}
+		// Fallback to localhost if no forwarder config found
+		target = fmt.Sprintf("localhost:%d", remotePort)
+		s.logger.Warn("No forwarder config found for client", 
+			zap.String("clientID", clientID),
+			zap.String("fallback", target))
 	}
 
 	// Get the client
@@ -671,10 +662,3 @@ func (s *ImprovedServer) sendForwardMessageToClient(client *ImprovedServerClient
 	return s.sendMessageToClient(client, wrappedMsg)
 }
 
-// getEnvOrDefault returns environment variable value or default if not set
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
