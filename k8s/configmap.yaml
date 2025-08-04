@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: tunnel-client
 data:
   # Tunnel server URL (modify for your environment)
-  TUNNEL_SERVER_URL: "wss://91.99.93.153:8443/tunnel"
+  TUNNEL_SERVER_URL: "wss://localhost:8443/tunnel"
   
   # Client configuration
   SKIP_VERIFY: "true"
@@ -17,6 +17,4 @@ data:
   
   # Kubernetes API tunnel configuration
   CLIENT_ID_WEB: "airgap-web"
-  FORWARD_WEB: "8080:ingress-nginx-controller.ingress-nginx:30443"
-
- 
+  TUNNEL_FORWARD: "8088:ingress-nginx-controller.ingress-nginx:443"

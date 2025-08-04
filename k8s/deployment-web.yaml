@@ -57,16 +57,16 @@ spec:
             configMapKeyRef:
               name: tunnel-config
               key: SKIP_VERIFY
-        - name: FORWARD_WEB
+        - name: TUNNEL_FORWARD
           valueFrom:
             configMapKeyRef:
               name: tunnel-config
-              key: FORWARD_WEB
+              key: TUNNEL_FORWARD
         args:
         - "-server=$(TUNNEL_SERVER_URL)"
         - "-token=$(TUNNEL_TOKEN)"
         - "-id=$(CLIENT_ID)"
-        - "-forward=$(FORWARD_WEB)"
+        - "-forward=$(TUNNEL_FORWARD)"
         - "-skip-verify=$(SKIP_VERIFY)"
         - "-improved=true"
         - "-metrics=true"

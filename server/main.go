@@ -28,15 +28,7 @@ var (
 	configFile  = flag.String("config", getConfigPath(), "Configuration file path")
 )
 
-type ForwarderConfig struct {
-	Name          string `yaml:"name"`
-	Port          int    `yaml:"port"`
-	Target        string `yaml:"target"`
-	ClientID      string `yaml:"client_id"`
-	Enabled       bool   `yaml:"enabled"`
-	Description   string `yaml:"description"`
-	WarningOnFail bool   `yaml:"warning_on_fail"`
-}
+// ForwarderConfig moved to tunnel package
 
 type ServerConfig struct {
 	Listen   string `yaml:"listen"`
@@ -49,8 +41,8 @@ type ServerConfig struct {
 }
 
 type Config struct {
-	Server     ServerConfig      `yaml:"server"`
-	Forwarders []ForwarderConfig `yaml:"forwarders"`
+	Server     ServerConfig               `yaml:"server"`
+	Forwarders []tunnel.ForwarderConfig `yaml:"forwarders"`
 }
 
 func getConfigPath() string {
@@ -152,8 +144,8 @@ func validatePortRange(port int) error {
 	return nil
 }
 
-func validateConfig(config *Config, logger *zap.Logger) []ForwarderConfig {
-	var validForwarders []ForwarderConfig
+func validateConfig(config *Config, logger *zap.Logger) []tunnel.ForwarderConfig {
+	var validForwarders []tunnel.ForwarderConfig
 	usedPorts := make(map[int]bool)
 	
 	for _, forwarder := range config.Forwarders {
@@ -188,7 +180,7 @@ func validateConfig(config *Config, logger *zap.Logger) []ForwarderConfig {
 	return validForwarders
 }
 
-func startTCPForwarders(server any, configs []ForwarderConfig, logger *zap.Logger, useImproved bool) {
+func startTCPForwarders(server any, configs []tunnel.ForwarderConfig, logger *zap.Logger, useImproved bool) {
 	for _, config := range configs {
 		if useImproved {
 			if improvedServer, ok := server.(*tunnel.ImprovedServer); ok {
@@ -215,7 +207,7 @@ func startTCPForwarders(server any, configs []ForwarderConfig, logger *zap.Logge
 			}
 		} else {
 			if originalServer, ok := server.(*tunnel.Server); ok {
-				go func(config ForwarderConfig) {
+				go func(config tunnel.ForwarderConfig) {
 					originalServer.StartTCPForwarder(config.Port, config.ClientID)
 					logger.Info("Started TCP forwarder", 
 						zap.String("name", config.Name),
@@ -268,7 +260,7 @@ func main() {
 	implType := "improved"
 	if config.Server.Improved {
 		logger.Info("Using improved tunnel server implementation")
-		server = tunnel.NewImprovedServer(logger, config.Server.Token)
+		server = tunnel.NewImprovedServer(logger, config.Server.Token, config.Forwarders)
 		mux.HandleFunc("/tunnel", server.(*tunnel.ImprovedServer).HandleTunnel)
 	} else {
 		logger.Info("Using original tunnel server implementation")

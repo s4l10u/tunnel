@@ -17,14 +17,26 @@ import (
 	"go.uber.org/zap"
 )
 
+// ForwarderConfig represents a port forwarding configuration
+type ForwarderConfig struct {
+	Name          string `yaml:"name"`
+	Port          int    `yaml:"port"`
+	Target        string `yaml:"target"`
+	ClientID      string `yaml:"client_id"`
+	Enabled       bool   `yaml:"enabled"`
+	Description   string `yaml:"description"`
+	WarningOnFail bool   `yaml:"warning_on_fail"`
+}
+
 // ImprovedServer handles WebSocket tunnel connections with improved reliability
 type ImprovedServer struct {
-	logger    *zap.Logger
-	authToken string
-	clients   *ClientManager
-	sessions  *SessionManager
-	upgrader  websocket.Upgrader
-	config    ServerConfig
+	logger     *zap.Logger
+	authToken  string
+	clients    *ClientManager
+	sessions   *SessionManager
+	upgrader   websocket.Upgrader
+	config     ServerConfig
+	forwarders map[string]string // clientID -> target mapping
 }
 
 // ServerConfig holds server configuration
@@ -229,15 +241,24 @@ type ImprovedServerClient struct {
 }
 
 // NewImprovedServer creates a new improved tunnel server
-func NewImprovedServer(logger *zap.Logger, authToken string) *ImprovedServer {
+func NewImprovedServer(logger *zap.Logger, authToken string, forwarders []ForwarderConfig) *ImprovedServer {
 	config := DefaultServerConfig()
 	
+	// Build forwarder mapping from clientID to target
+	forwarderMap := make(map[string]string)
+	for _, fw := range forwarders {
+		if fw.Enabled {
+			forwarderMap[fw.ClientID] = fw.Target
+		}
+	}
+	
 	return &ImprovedServer{
-		logger:    logger,
-		authToken: authToken,
-		clients:   NewClientManager(logger),
-		sessions:  NewSessionManager(logger),
-		config:    config,
+		logger:     logger,
+		authToken:  authToken,
+		clients:    NewClientManager(logger),
+		sessions:   NewSessionManager(logger),
+		config:     config,
+		forwarders: forwarderMap,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // Configure based on security needs
@@ -420,19 +441,22 @@ func (s *ImprovedServer) StartTCPForwarder(port int, clientID string) error {
 func (s *ImprovedServer) handleTCPConnection(conn net.Conn, clientID string, remotePort int) {
 	sessionID := fmt.Sprintf("%s-%d-%d", clientID, remotePort, time.Now().UnixNano())
 	
-	// Determine target based on client and port using environment variables
-	var target string
-	switch clientID {
-	case "airgap-web":
-		target = getEnvOrDefault("TARGET_WEB", "webapp:80")
-	case "airgap-db":
-		target = getEnvOrDefault("TARGET_DB", "database:5432")
-	case "airgap-ssh":
-		target = getEnvOrDefault("TARGET_SSH", "ssh-server:22")
-	case "airgap-mongodb":
-		target = getEnvOrDefault("TARGET_MONGODB", "mongodb:27017")
-	default:
-		target = fmt.Sprintf("localhost:%d", remotePort)
+	// Determine target from forwarder configuration
+	target, exists := s.forwarders[clientID]
+	if !exists {
+		// Fallback to environment variables for backward compatibility, then localhost
+		switch clientID {
+		case "airgap-web":
+			target = getEnvOrDefault("TARGET_WEB", "webapp:80")
+		case "airgap-db":
+			target = getEnvOrDefault("TARGET_DB", "database:5432")
+		case "airgap-ssh":
+			target = getEnvOrDefault("TARGET_SSH", "ssh-server:22")
+		case "airgap-mongodb":
+			target = getEnvOrDefault("TARGET_MONGODB", "mongodb:27017")
+		default:
+			target = fmt.Sprintf("localhost:%d", remotePort)
+		}
 	}
 
 	// Get the client
