@@ -17,7 +17,7 @@ networks:
         - subnet: 172.22.0.0/24
 
 services:
-  # Tunnel server (internet-facing)
+  # Tunnel server (internet-facing) - NEW: YAML Configuration
   tunnel-server:
     build:
       context: .
@@ -32,31 +32,54 @@ services:
       - "2222:2222"  # SSH tunnel
       - "27017:27017"  # MongoDB tunnel
       - "6443:6443"  # Kubernetes API server tunnel
+      # Optional services (enable via environment variables)
+      - "6379:6379"  # Redis tunnel (enable with TUNNEL_FORWARDER_REDIS_ENABLED=true)
+      - "9200:9200"  # Elasticsearch tunnel (enable with TUNNEL_FORWARDER_ELASTICSEARCH_ENABLED=true)
     environment:
+      # Core Configuration
       - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
       - USE_IMPROVED=${USE_IMPROVED:-true}
+      
+      # Service Targets (used by YAML config)
       - TARGET_WEB=${TARGET_WEB:-webapp:80}
       - TARGET_DB=${TARGET_DB:-database:5432}
       - TARGET_SSH=${TARGET_SSH:-ssh-server:22}
       - TARGET_MONGODB=${TARGET_MONGODB:-ss-mongodb-0.mongodb:27017}
-      - TARGET_K8S_API=${TARGET_K8S_API:-kubernetes-api-server:6443}
-      - TLS_CERT_PATH=${TLS_CERT_PATH:-/certs/server.crt}
-      - TLS_KEY_PATH=${TLS_KEY_PATH:-/certs/server.key}
+      - TARGET_K8S_API=${TARGET_K8S_API:-kubernetes-api:6443}
+      - TARGET_REDIS=${TARGET_REDIS:-redis:6379}
+      - TARGET_ELASTICSEARCH=${TARGET_ELASTICSEARCH:-elasticsearch:9200}
+      
+      # TLS Configuration
+      - TLS_CERT_PATH=${TLS_CERT_PATH:-}
+      - TLS_KEY_PATH=${TLS_KEY_PATH:-}
+      
+      # Optional Service Controls (NEW: Runtime enable/disable)
+      - TUNNEL_FORWARDER_REDIS_ENABLED=${ENABLE_REDIS:-false}
+      - TUNNEL_FORWARDER_ELASTICSEARCH_ENABLED=${ENABLE_ELASTICSEARCH:-false}
+      
+      # Optional Port Overrides (NEW: Runtime configuration)
+      # - TUNNEL_FORWARDER_WEB_PORT=8080
+      # - TUNNEL_FORWARDER_DATABASE_PORT=5432
+      # - TUNNEL_FORWARDER_REDIS_PORT=6379
     volumes:
       - ./certs:/certs:ro
-    command:  
-      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
-      - "-listen=:8443"
-      - "-improved=${USE_IMPROVED:-true}"
-      - "-cert=/certs/server.crt"
-      - "-key=/certs/server.key"
+      - ./docker-config.yaml:/app/config.yaml:ro  # NEW: YAML configuration
+    command: ["-config=/app/config.yaml"]  # NEW: Use YAML config
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8443/health"]
       interval: 10s
       timeout: 5s
       retries: 3
 
-
+  database-client:
+    image: postgres:15-alpine
+    container_name: extern-database
+    networks:
+      - external-network
+    environment:
+      - POSTGRES_PASSWORD=airgapped-password
+      - POSTGRES_USER=airgapped
+      - POSTGRES_DB=airgapped_db
   # Tunnel client for web app
   tunnel-client-web:
     build:
@@ -100,46 +123,46 @@ services:
       - "-improved=${USE_IMPROVED:-true}"
 
   # Tunnel client for SSH
-  tunnel-client-ssh:
-    build:
-      context: .
-      dockerfile: Dockerfile.client
-    container_name: tunnel-client-ssh
-    networks:
-      - external-network
-      - airgapped-network
-    depends_on:
-      tunnel-server:
-        condition: service_healthy
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
-    command:
-      - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
-      - "-forward=2222:ssh-server:22"
-      - "-id=airgap-ssh"
-      - "-improved=${USE_IMPROVED:-true}"
+  # tunnel-client-ssh:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.client
+  #   container_name: tunnel-client-ssh
+  #   networks:
+  #     - external-network
+  #     - airgapped-network
+  #   depends_on:
+  #     tunnel-server:
+  #       condition: service_healthy
+  #   environment:
+  #     - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
+  #   command:
+  #     - "-server=ws://tunnel-server:8443/tunnel"
+  #     - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
+  #     - "-forward=2222:ssh-server:22"
+  #     - "-id=airgap-ssh"
+  #     - "-improved=${USE_IMPROVED:-true}"
 
   # Tunnel client for Kubernetes API server
-  tunnel-client-k8s:
-    build:
-      context: .
-      dockerfile: Dockerfile.client
-    container_name: tunnel-client-k8s
-    networks:
-      - external-network
-      - airgapped-network
-    depends_on:
-      tunnel-server:
-        condition: service_healthy
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
-    command:
-      - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
-      - "-forward=6443:kubernetes-api:6443"
-      - "-id=airgap-k8s-api"
-      - "-improved=${USE_IMPROVED:-true}"
+  # tunnel-client-k8s:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.client
+  #   container_name: tunnel-client-k8s
+  #   networks:
+  #     - external-network
+  #     - airgapped-network
+  #   depends_on:
+  #     tunnel-server:
+  #       condition: service_healthy
+  #   environment:
+  #     - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
+  #   command:
+  #     - "-server=ws://tunnel-server:8443/tunnel"
+  #     - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
+  #     - "-forward=6443:kubernetes-api:6443"
+  #     - "-id=airgap-k8s-api"
+  #     - "-improved=${USE_IMPROVED:-true}"
 
   # Example air-gapped services
   
@@ -165,45 +188,68 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
-  # SSH server in air-gapped network
-  ssh-server:
-    image: linuxserver/openssh-server:latest
-    container_name: airgapped-ssh
-    networks:
-      - airgapped-network
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-      - PASSWORD_ACCESS=true
-      - USER_PASSWORD=airgapped
-      - USER_NAME=airgapped
+  # # SSH server in air-gapped network
+  # ssh-server:
+  #   image: linuxserver/openssh-server:latest
+  #   container_name: airgapped-ssh
+  #   networks:
+  #     - airgapped-network
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=UTC
+  #     - PASSWORD_ACCESS=true
+  #     - USER_PASSWORD=airgapped
+  #     - USER_NAME=airgapped
 
-  # Kubernetes API server simulation in air-gapped network
-  kubernetes-api:
-    image: nginx:alpine
-    container_name: airgapped-k8s-api
-    networks:
-      - airgapped-network
-    ports:
-      - "6443"
-    volumes:
-      - ./examples/k8s-api:/usr/share/nginx/html:ro
-    command: >
-      sh -c "echo 'server {
-        listen 6443 ssl;
-        server_name kubernetes-api;
-        ssl_certificate /etc/nginx/ssl/server.crt;
-        ssl_certificate_key /etc/nginx/ssl/server.key;
-        ssl_protocols TLSv1.2 TLSv1.3;
-        location / {
-          return 200 \"{\\\"kind\\\":\\\"APIVersions\\\",\\\"versions\\\":[\\\"v1\\\"],\\\"serverAddressByClientCIDRs\\\":[{\\\"clientCIDR\\\":\\\"0.0.0.0/0\\\",\\\"serverAddress\\\":\\\"kubernetes-api:6443\\\"}]}\";
-          add_header Content-Type application/json;
-        }
-      }' > /etc/nginx/conf.d/default.conf &&
-      mkdir -p /etc/nginx/ssl &&
-      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/server.key -out /etc/nginx/ssl/server.crt -subj '/CN=kubernetes-api' &&
-      nginx -g 'daemon off;'"
+  # # Kubernetes API server simulation in air-gapped network
+  # kubernetes-api:
+  #   image: nginx:alpine
+  #   container_name: airgapped-k8s-api
+  #   networks:
+  #     - airgapped-network
+  #   ports:
+  #     - "6443"
+  #   volumes:
+  #     - ./examples/k8s-api:/usr/share/nginx/html:ro
+  #   command: >
+  #     sh -c "echo 'server {
+  #       listen 6443 ssl;
+  #       server_name kubernetes-api;
+  #       ssl_certificate /etc/nginx/ssl/server.crt;
+  #       ssl_certificate_key /etc/nginx/ssl/server.key;
+  #       ssl_protocols TLSv1.2 TLSv1.3;
+  #       location / {
+  #         return 200 \"{\\\"kind\\\":\\\"APIVersions\\\",\\\"versions\\\":[\\\"v1\\\"],\\\"serverAddressByClientCIDRs\\\":[{\\\"clientCIDR\\\":\\\"0.0.0.0/0\\\",\\\"serverAddress\\\":\\\"kubernetes-api:6443\\\"}]}\";
+  #         add_header Content-Type application/json;
+  #       }
+  #     }' > /etc/nginx/conf.d/default.conf &&
+  #     mkdir -p /etc/nginx/ssl &&
+  #     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/server.key -out /etc/nginx/ssl/server.crt -subj '/CN=kubernetes-api' &&
+  #     nginx -g 'daemon off;'"
+
+  # # Optional: Redis Cache (NEW - demonstrate unlimited services)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: airgapped-redis
+  #   networks:
+  #     - airgapped-network
+  #   command: redis-server --requirepass airgapped-redis-password
+  #   profiles:
+  #     - optional  # Only start when explicitly requested
+      
+  # # Optional: Elasticsearch (NEW - demonstrate unlimited services)
+  # elasticsearch:
+  #   image: elasticsearch:8.11.0
+  #   container_name: airgapped-elasticsearch
+  #   networks:
+  #     - airgapped-network
+  #   environment:
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=false
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   profiles:
+  #     - optional  # Only start when explicitly requested
 
   # External user simulation (can only access through tunnel)
   external-user:
@@ -216,26 +262,26 @@ services:
       - tunnel-server
 
   # Traffic monitoring container
-  traffic-monitor:
-    build:
-      context: .
-      dockerfile: Dockerfile.monitor
-    container_name: traffic-monitor
-    networks:
-      - external-network
-      - airgapped-network
-    volumes:
-      - ./captures:/captures
-      - ./logs:/logs
-    environment:
-      - TUNNEL_SERVER=tunnel-server
-      - TUNNEL_PORT=8443
-    depends_on:
-      - tunnel-server
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    command: /bin/sh -c "while true; do sleep 300; done"
+  # traffic-monitor:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.monitor
+  #   container_name: traffic-monitor
+  #   networks:
+  #     - external-network
+  #     - airgapped-network
+  #   volumes:
+  #     - ./captures:/captures
+  #     - ./logs:/logs
+  #   environment:
+  #     - TUNNEL_SERVER=tunnel-server
+  #     - TUNNEL_PORT=8443
+  #   depends_on:
+  #     - tunnel-server
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - NET_RAW
+  #   command: /bin/sh -c "while true; do sleep 300; done"
 
 volumes:
   db-data:

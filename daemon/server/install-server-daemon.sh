@@ -128,7 +128,7 @@ install_config() {
     if [[ ! -f "$CONFIG_DIR/config.yaml" ]]; then
         if [[ -f "daemon/server/config.yaml.example" ]]; then
             cp "daemon/server/config.yaml.example" "$CONFIG_DIR/config.yaml"
-            chown root:root "$CONFIG_DIR/config.yaml"
+            chown root:tunnel-server "$CONFIG_DIR/config.yaml"
             chmod 640 "$CONFIG_DIR/config.yaml"
             log_success "Created YAML configuration file: $CONFIG_DIR/config.yaml"
             log_info "Using modern YAML configuration format (recommended)"
@@ -140,7 +140,7 @@ install_config() {
     # Install legacy environment config (for backward compatibility)
     if [[ ! -f "$CONFIG_DIR/config" ]]; then
         cp "daemon/server/server-config.example" "$CONFIG_DIR/config"
-        chown root:root "$CONFIG_DIR/config"
+        chown root:tunnel-server "$CONFIG_DIR/config"
         chmod 640 "$CONFIG_DIR/config"
         log_success "Created legacy configuration file: $CONFIG_DIR/config"
     else

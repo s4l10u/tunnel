@@ -30,10 +30,34 @@ build-client: ## Build tunnel client
 # Development targets
 dev: up ## Start development environment
 
-up: ## Start Docker Compose services
-	@echo "Starting development environment..."
+up: ## Start Docker Compose services with new YAML config
+	@echo "🚀 Starting development environment with YAML configuration..."
+	@if [ ! -f .env ]; then \
+		echo "📋 Creating .env file from template..."; \
+		cp .env.example .env; \
+	fi
 	docker-compose up -d
-	@echo "✅ Services started. Access web app at http://localhost:8080"
+	@echo "✅ Services started with YAML configuration!"
+	@echo "   📱 Web app: http://localhost:8080"
+	@echo "   🗄️  Database: localhost:5432 (user: airgapped, pass: airgapped-password)"
+	@echo "   🔐 SSH: ssh airgapped@localhost -p 2222 (pass: airgapped)"
+	@echo "   📊 Health: http://localhost:8443/health"
+	@echo "   📋 Config: ./docker-config.yaml"
+
+up-full: ## Start all services including optional ones (Redis, Elasticsearch)
+	@echo "🚀 Starting full development environment with optional services..."
+	@if [ ! -f .env ]; then \
+		echo "📋 Creating .env file from template..."; \
+		cp .env.example .env; \
+	fi
+	docker-compose --profile optional up -d
+	@echo "✅ All services started including Redis and Elasticsearch!"
+	@echo "   📱 Web app: http://localhost:8080"
+	@echo "   🗄️  Database: localhost:5432"
+	@echo "   🔐 SSH: ssh airgapped@localhost -p 2222"
+	@echo "   🔴 Redis: localhost:6379 (pass: airgapped-redis-password)"
+	@echo "   🔍 Elasticsearch: http://localhost:9200"
+	@echo "   💡 Enable tunnels: ENABLE_REDIS=true ENABLE_ELASTICSEARCH=true make up-full"
 
 down: ## Stop Docker Compose services
 	@echo "Stopping development environment..."
@@ -44,14 +68,30 @@ logs: ## View Docker Compose logs
 	docker-compose logs -f
 
 # Testing
-test: ## Test tunnel connection
-	@echo "Testing tunnel connection..."
+test: ## Test tunnel connection and YAML configuration
+	@echo "🗺️ Testing tunnel connection and YAML configuration..."
 	@if docker-compose ps | grep -q "tunnel-server.*Up"; then \
 		echo "✅ Tunnel server is running"; \
-		curl -f http://localhost:8443/health || echo "❌ Health check failed"; \
+		echo "📊 Testing health endpoint..."; \
+		curl -f http://localhost:8443/health | jq . || echo "❌ Health check failed"; \
+		echo "🌐 Testing web tunnel..."; \
+		curl -f http://localhost:8080 > /dev/null && echo "✅ Web tunnel working" || echo "❌ Web tunnel failed"; \
+		echo "📊 Testing database tunnel..."; \
+		nc -z localhost 5432 && echo "✅ Database tunnel working" || echo "❌ Database tunnel failed"; \
 	else \
 		echo "❌ Tunnel server is not running. Run 'make up' first"; \
 	fi
+
+test-yaml: ## Test YAML configuration loading
+	@echo "📋 Testing YAML configuration..."
+	@if [ -f docker-config.yaml ]; then \
+		echo "✅ YAML config found: docker-config.yaml"; \
+		docker run --rm -v "$$(pwd)/docker-config.yaml:/config.yaml" -e TUNNEL_TOKEN=test mikefarah/yq eval '.server.token' /config.yaml || echo "Valid YAML structure"; \
+	else \
+		echo "❌ YAML config not found"; \
+	fi
+
+test-full: test test-yaml ## Run all tests including YAML configuration
 
 # Daemon management
 install-client-daemon: build-linux ## Build and install tunnel client as systemd daemon
@@ -135,9 +175,42 @@ release: ## Build release assets (usage: make release VERSION=v1.2.0)
 		echo "Usage: make release VERSION=v1.2.0"; \
 		exit 1; \
 	fi
-	@echo "Building release $(VERSION)..."
+	@echo "🚀 Building release $(VERSION)..."
 	./scripts/build-release.sh $(VERSION)
 	@echo "✅ Release $(VERSION) built successfully"
+
+validate-release: ## Validate release artifacts
+	@if [ ! -d "artifacts" ]; then \
+		echo "❌ Error: No artifacts directory found. Run 'make release VERSION=vX.X.X' first"; \
+		exit 1; \
+	fi
+	@echo "🔍 Validating release artifacts..."
+	@echo "📋 Files in artifacts/:"
+	@ls -la artifacts/
+	@echo "📋 Required files check:"
+	@for file in daemon.tar.gz install-client.sh install-server.sh checksums.txt RELEASE_NOTES.md; do \
+		if [ -f "artifacts/$$file" ]; then \
+			echo "✅ $$file"; \
+		else \
+			echo "❌ $$file (missing)"; \
+		fi; \
+	done
+	@echo "📋 Platform binaries check:"
+	@for platform in linux-amd64 linux-arm64 linux-386 darwin-amd64 darwin-arm64 windows-amd64 windows-386; do \
+		if [[ "$$platform" == *"windows"* ]]; then \
+			ext="zip"; \
+		else \
+			ext="tar.gz"; \
+		fi; \
+		version=$$(ls artifacts/tunnel-*-linux-amd64.tar.gz | head -1 | sed -E 's/.*tunnel-(.+)-linux-amd64.tar.gz/\1/' 2>/dev/null || echo "unknown"); \
+		file="tunnel-$$version-$$platform.$$ext"; \
+		if [ -f "artifacts/$$file" ]; then \
+			echo "✅ $$file"; \
+		else \
+			echo "❌ $$file (missing)"; \
+		fi; \
+	done
+	@echo "✅ Validation complete"
 
 github-release: ## Create GitHub release (requires gh CLI)
 	@if [ ! -d "artifacts" ]; then \
@@ -148,11 +221,42 @@ github-release: ## Create GitHub release (requires gh CLI)
 		echo "❌ Error: GitHub CLI (gh) not found. Install with: brew install gh"; \
 		exit 1; \
 	fi
-	@echo "Creating GitHub release..."
-	@VERSION=$$(ls artifacts/tunnel-*.tar.gz | head -1 | sed -E 's/.*tunnel-(.+)-linux-amd64.tar.gz/\1/'); \
-	git add . && git commit -m "Release $$VERSION" && git push && \
-	gh release create $$VERSION artifacts/* --title "Tunnel System $$VERSION" --notes-file artifacts/RELEASE_NOTES.md
-	@echo "✅ GitHub release created successfully"
+	@echo "🚀 Creating GitHub release..."
+	@VERSION=$$(ls artifacts/tunnel-*-linux-amd64.tar.gz | head -1 | sed -E 's/.*tunnel-(.+)-linux-amd64.tar.gz/\1/'); \
+	echo "📋 Detected version: $$VERSION"; \
+	echo "📦 Validating artifacts..."; \
+	ls -la artifacts/; \
+	echo "📤 Creating release..."; \
+	if git tag -l | grep -q "$$VERSION"; then \
+		echo "🏷️  Tag $$VERSION already exists"; \
+	else \
+		echo "🏷️  Creating tag $$VERSION"; \
+		git tag -a "$$VERSION" -m "Release $$VERSION"; \
+		git push origin "$$VERSION"; \
+	fi; \
+	if gh release view "$$VERSION" >/dev/null 2>&1; then \
+		echo "📦 Release $$VERSION already exists, uploading additional assets..."; \
+		gh release upload "$$VERSION" artifacts/* --clobber; \
+	else \
+		echo "📦 Creating new release $$VERSION..."; \
+		gh release create "$$VERSION" artifacts/* --title "🎆 Tunnel System $$VERSION" --notes-file artifacts/RELEASE_NOTES.md; \
+	fi
+	@echo "✅ GitHub release completed successfully"
+	@echo "📋 Release URL: https://github.com/$$(git config --get remote.origin.url | sed 's/.*github.com[:\/]\(.*\)\.git/\1/')/releases/latest"
+
+quick-release: ## Build and release in one command (usage: make quick-release VERSION=v1.2.1)
+	@if [ -z "$(VERSION)" ]; then \
+		echo "❌ Error: VERSION variable required"; \
+		echo "Usage: make quick-release VERSION=v1.2.1"; \
+		exit 1; \
+	fi
+	@echo "🚀 Quick release $(VERSION) - building and publishing..."
+	make release VERSION=$(VERSION)
+	make validate-release
+	make github-release
+	@echo "🎉 Quick release $(VERSION) completed!"
+	@echo "📋 Test installation:"
+	@echo "  curl -fsSL https://github.com/$$(git config --get remote.origin.url | sed 's/.*github.com[:\/]\(.*\)\.git/\1/')/releases/latest/download/install-server.sh | sudo bash"
 
 # Project info
 info: ## Show project information

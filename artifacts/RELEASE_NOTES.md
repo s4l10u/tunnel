@@ -1,4 +1,4 @@
-# Tunnel System Release v1.2.0
+# Tunnel System Release v1.2.1
 
 Secure tunnel system for establishing connections between air-gapped environments and external networks.
 
@@ -30,7 +30,7 @@ curl -fsSL https://github.com/s4l10u/tunnel/releases/latest/download/install-ser
 |------|-------------|
 | `install-client.sh` | One-line client installer |
 | `install-server.sh` | One-line server installer |
-| `tunnel-v1.2.0-\<os\>-\<arch\>.tar.gz` | Binary archives for each platform |
+| `tunnel-v1.2.1-\<os\>-\<arch\>.tar.gz` | Binary archives for each platform |
 | `daemon.tar.gz` | Daemon installation files |
 | `checksums.txt` | SHA256 checksums for verification |
 
@@ -78,93 +78,18 @@ sha256sum -c checksums.txt
 - [Installation Guide](README.md)
 - [TLS Setup](TLS-SETUP.md)
 
-## 🆕 What's New in v1.2.0
+## 🆕 What's New in v1.2.1
 
-### 🎆 **MAJOR: Modern YAML Configuration System**
-- **✨ Unlimited Custom Services** - Add Redis, Elasticsearch, any service without code changes
-- **⚙️ Environment Variable Overrides** - Runtime configuration with `TUNNEL_FORWARDER_<NAME>_PORT=9090`
-- **🛡️ Advanced Validation** - Port conflict detection, range validation, descriptive errors
-- **🔄 100% Backward Compatible** - Legacy environment configs still fully supported
-- **📝 Self-Documenting** - Rich descriptions and examples in config files
-
-### 🚀 **Enhanced Deployment Experience**
-- **🎨 Modern Installation UI** - Enhanced scripts with emojis, progress indicators, clear guidance
-- **🎛️ Dual Configuration Support** - Automatic YAML + legacy config generation
-- **📚 Comprehensive Documentation** - Updated guides with migration paths and examples
-- **🔧 Professional Systemd Integration** - Smart config detection and fallback
-
-### 🛠️ **Technical Improvements**
-- **Configuration Priority System** - Command line → YAML → Environment → Defaults
-- **Runtime Service Management** - Enable/disable services via environment variables
-- **Professional Error Messages** - Descriptive validation with helpful suggestions
-- **Enhanced Logging** - Better visibility into configuration loading and validation
-
-## 🎯 Configuration Revolution
-
-### Before (Limited)
-```bash
-# Only 5 hardcoded services
-TUNNEL_WEB_PORT=8080
-TUNNEL_DB_PORT=5432
-# Can't add custom services
-```
-
-### After (Unlimited)
-```yaml
-forwarders:
-  # Add ANY service you want!
-  - name: "redis"
-    port: 6379
-    target: "redis-server:6379"
-    client_id: "airgap-redis"
-    enabled: true
-    description: "Redis cache tunnel"
-    
-  - name: "elasticsearch"
-    port: 9200
-    target: "elasticsearch:9200"
-    client_id: "airgap-elasticsearch"
-    enabled: true
-    description: "Search engine tunnel"
-```
-
-### Environment Override Power
-```bash
-# Override any service configuration at runtime
-TUNNEL_FORWARDER_REDIS_PORT=7000
-TUNNEL_FORWARDER_WEB_TARGET=custom-app:8080
-TUNNEL_FORWARDER_ELASTICSEARCH_ENABLED=true
-```
+- Separated daemon installations for client and server
+- One-line installation scripts
+- Multi-architecture binary releases
+- Enhanced security with systemd hardening
+- Improved TLS certificate handling
+- Fixed critical TLS verification bug
 
 ## 🐛 Bug Fixes
 
-- **Fixed unused import warnings** in server build
-- **Improved YAML dependency management** with go.mod updates
-- **Enhanced error messages** for configuration validation
-- **Better systemd service configuration** with environment variable support
-- **Resolved build issues** with proper dependency handling
-
-## 💡 Migration Guide
-
-### From Legacy Environment Config
-```bash
-# Old way (still works)
-sudo nano /etc/tunnel-server/config
-
-# New way (recommended)
-sudo nano /etc/tunnel-server/config.yaml
-```
-
-### Configuration Priority
-1. **Command line flags** (`-token`, `-listen`, etc.)
-2. **YAML config file** (`/etc/tunnel-server/config.yaml`) ← **NEW**
-3. **Environment variables** (from `/etc/tunnel-server/config`)
-4. **Built-in defaults**
-
----
-
-## 🚀 Breaking Changes: NONE
-
-This release is **100% backward compatible**. All existing environment variable configurations continue to work without any changes required.
-
-**Upgrade Path**: Simply update binaries and optionally migrate to YAML configuration for enhanced features.
+- Fixed TLS certificate verification logic in client
+- Resolved race condition in TCP session cleanup
+- Improved error handling in daemon installation
+- Fixed certificate permissions for Docker compatibility

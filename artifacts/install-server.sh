@@ -94,28 +94,14 @@ main() {
     cd /
     rm -rf "$INSTALL_DIR"
     
-    log_success "🎉 Tunnel server installed successfully!"
+    log_success "Tunnel server installed successfully!"
     echo
-    log_info "📋 Next steps:"
-    echo "1. 🔧 Edit configuration:"
-    echo "   RECOMMENDED: sudo nano /etc/tunnel-server/config.yaml"
-    echo "   LEGACY:      sudo nano /etc/tunnel-server/config"
-    echo "2. 🔄 Enable service: sudo systemctl enable tunnel-server"
-    echo "3. ▶️  Start service: sudo systemctl start tunnel-server"
-    echo "4. 📊 Check status: sudo systemctl status tunnel-server"
-    echo "5. 📜 View logs: sudo journalctl -u tunnel-server -f"
-    echo "6. 🔥 Check firewall: sudo ufw allow 8443/tcp"
-    echo
-    log_info "🌟 YAML Configuration Benefits:"
-    echo "  • Add unlimited custom services (Redis, Elasticsearch, etc.)"
-    echo "  • Environment variable overrides: TUNNEL_FORWARDER_<NAME>_PORT=9090"
-    echo "  • Better validation and descriptive error messages"
-    echo "  • Runtime service enable/disable configuration"
-    echo
-    log_info "🚀 Quick Start Example:"
-    echo "  # Edit token in config.yaml, then:"
-    echo "  sudo systemctl enable tunnel-server"
-    echo "  sudo systemctl start tunnel-server"
+    log_info "Next steps:"
+    echo "1. Edit configuration: sudo nano /etc/tunnel-server/config"
+    echo "2. Enable service: sudo systemctl enable tunnel-server"
+    echo "3. Start service: sudo systemctl start tunnel-server"
+    echo "4. Check status: sudo systemctl status tunnel-server"
+    echo "5. Check firewall: sudo ufw allow 8443/tcp"
 }
 
 main "$@"

@@ -131,7 +131,8 @@ create_checksums() {
     log_info "Creating checksums..."
     
     cd "$BUILD_DIR"
-    sha256sum * > checksums.txt
+    # Create checksums for all release assets (exclude directories and text files)
+    sha256sum *.tar.gz *.zip daemon.tar.gz install-*.sh > checksums.txt 2>/dev/null || true
     log_success "Created checksums.txt"
     cd ..
 }
@@ -493,17 +494,65 @@ EOF
     log_success "Created release notes"
 }
 
+validate_release_assets() {
+    log_info "Validating release assets..."
+    
+    cd "$BUILD_DIR"
+    
+    # Check required files exist
+    local required_files=("daemon.tar.gz" "install-client.sh" "install-server.sh" "checksums.txt" "RELEASE_NOTES.md")
+    
+    for file in "${required_files[@]}"; do
+        if [[ ! -f "$file" ]]; then
+            log_error "Missing required file: $file"
+            exit 1
+        fi
+    done
+    
+    # Check platform binaries exist
+    local missing_platforms=()
+    for platform in "${PLATFORMS[@]}"; do
+        IFS='/' read -r -a platform_split <<< "$platform"
+        GOOS="${platform_split[0]}"
+        GOARCH="${platform_split[1]}"
+        
+        if [ "$GOOS" = "windows" ]; then
+            if [[ ! -f "tunnel-$VERSION-$GOOS-$GOARCH.zip" ]]; then
+                missing_platforms+=("$GOOS-$GOARCH")
+            fi
+        else
+            if [[ ! -f "tunnel-$VERSION-$GOOS-$GOARCH.tar.gz" ]]; then
+                missing_platforms+=("$GOOS-$GOARCH")
+            fi
+        fi
+    done
+    
+    if [ ${#missing_platforms[@]} -gt 0 ]; then
+        log_error "Missing platform binaries: ${missing_platforms[*]}"
+        exit 1
+    fi
+    
+    log_success "All required release assets validated"
+    cd ..
+}
+
 show_summary() {
     log_success "Build completed successfully!"
     echo
     log_info "Release assets created in $BUILD_DIR/:"
     ls -la "$BUILD_DIR/"
     echo
+    log_info "Asset count: $(ls -1 $BUILD_DIR/ | wc -l) files"
+    echo
     log_info "To create a GitHub release:"
     echo "1. Commit and push changes: git add . && git commit -m 'Release $VERSION' && git push"
-    echo "2. Create release: gh release create $VERSION $BUILD_DIR/* --title 'Tunnel System $VERSION' --notes-file $BUILD_DIR/RELEASE_NOTES.md"
+    echo "2. Create tag: git tag -a $VERSION -m 'Release $VERSION' && git push origin $VERSION"
+    echo "3. Create release: gh release create $VERSION $BUILD_DIR/* --title 'Tunnel System $VERSION' --notes-file $BUILD_DIR/RELEASE_NOTES.md"
     echo
-    log_info "One-line install commands:"
+    log_info "Or use the Makefile:"
+    echo "make github-release"
+    echo
+    log_info "One-line install commands (after release):"
     echo "Client: curl -fsSL https://github.com/s4l10u/tunnel/releases/latest/download/install-client.sh | sudo bash"
     echo "Server: curl -fsSL https://github.com/s4l10u/tunnel/releases/latest/download/install-server.sh | sudo bash"
 }
@@ -514,11 +563,12 @@ main() {
     create_build_dir
     build_binaries
     create_archives
-    create_checksums
     copy_installation_files
     create_install_scripts
     create_daemon_archive
+    create_checksums
     create_release_notes
+    validate_release_assets
     show_summary
 }
 

@@ -1,38 +1,12 @@
-# Tunnel Server Daemon Configuration
-# Copy this file to /etc/tunnel-server/config.yaml and customize for your environment
-
-# =============================================================================
-# SERVER CONFIGURATION
-# =============================================================================
+# Tunnel Server Configuration
 server:
-  # Listen address and port
-  # Use :8443 for all interfaces, or specify IP:PORT for specific interface
-  listen: "${TUNNEL_LISTEN_ADDR:-:8443}"
-  
-  # Authentication token (REQUIRED)
-  # Must match the token configured on tunnel clients
-  # Use a strong, random token for production
-  token: "${TUNNEL_TOKEN}"
-  
-  # Use improved implementation (recommended)
+  listen: ":8443"
+  token: "your-secure-production-token-here"
   improved: true
-  
-  # TLS/SSL Configuration
   tls:
-    # TLS certificate file path
-    # Leave empty to run without TLS (not recommended for production)
-    # For Let's Encrypt: /etc/letsencrypt/live/your-domain.com/fullchain.pem
-    # For self-signed: /etc/tunnel-server/certs/server.crt
-    cert: "${TUNNEL_CERT_PATH:-/etc/tunnel-server/certs/server.crt}"
-    
-    # TLS private key file path
-    # For Let's Encrypt: /etc/letsencrypt/live/your-domain.com/privkey.pem
-    # For self-signed: /etc/tunnel-server/certs/server.key
-    key: "${TUNNEL_KEY_PATH:-/etc/tunnel-server/certs/server.key}"
+    cert: "/etc/tunnel-server/certs/server.crt"
+    key: "/etc/tunnel-server/certs/server.key"
 
-# =============================================================================
-# TCP FORWARDERS CONFIGURATION
-# =============================================================================
 forwarders:
   # Web Application Tunnel
   - name: "web"
@@ -47,7 +21,7 @@ forwarders:
     port: 5432
     target: "database:5432"
     client_id: "airgap-db"
-    enabled: true
+    enabled: false
     description: "PostgreSQL database tunnel"
     
   # SSH Access Tunnel
@@ -55,94 +29,21 @@ forwarders:
     port: 2222
     target: "ssh-server:22"
     client_id: "airgap-ssh"
-    enabled: true
+    enabled: false
     description: "SSH access tunnel"
     
-  # MongoDB Tunnel
-  - name: "mongodb"
-    port: 27017
-    target: "mongodb:27017"
-    client_id: "airgap-mongodb"
-    enabled: true
-    description: "MongoDB database tunnel"
-    
-  # Kubernetes API Server Tunnel
+  # Kubernetes API Tunnel
   - name: "kubernetes-api"
     port: 6443
     target: "kubernetes-api:6443"
     client_id: "airgap-k8s-api"
-    enabled: false  # Disabled by default (may conflict with existing K8s)
+    enabled: false
     description: "Kubernetes API server tunnel"
-    warning_on_fail: true  # Don't error, just warn if this fails
     
-  # =============================================================================
-  # CUSTOM SERVICES - Add your own services here!
-  # =============================================================================
-  
-  # Redis Cache Example (disabled by default)
+  # Redis Cache Tunnel
   - name: "redis"
     port: 6379
-    target: "redis-server:6379"
+    target: "redis:6379"
     client_id: "airgap-redis"
     enabled: false
     description: "Redis cache tunnel"
-    
-  # Elasticsearch Example (disabled by default)
-  - name: "elasticsearch"
-    port: 9200
-    target: "elasticsearch:9200"
-    client_id: "airgap-elasticsearch"
-    enabled: false
-    description: "Elasticsearch search engine tunnel"
-
-# =============================================================================
-# ENVIRONMENT VARIABLE OVERRIDES
-# =============================================================================
-# Any forwarder can be overridden with environment variables:
-# TUNNEL_FORWARDER_<NAME>_PORT=9090
-# TUNNEL_FORWARDER_<NAME>_TARGET=new-target:80
-# TUNNEL_FORWARDER_<NAME>_ENABLED=false
-#
-# Examples:
-# TUNNEL_FORWARDER_WEB_PORT=18080
-# TUNNEL_FORWARDER_DATABASE_TARGET=postgres-cluster:5432
-# TUNNEL_FORWARDER_REDIS_ENABLED=true
-
-# =============================================================================
-# COMMON CONFIGURATIONS
-# =============================================================================
-
-# Production with Let's Encrypt:
-# server:
-#   tls:
-#     cert: /etc/letsencrypt/live/your-domain.com/fullchain.pem
-#     key: /etc/letsencrypt/live/your-domain.com/privkey.pem
-
-# Development without TLS:
-# server:
-#   tls:
-#     cert: ""
-#     key: ""
-
-# Custom domain with self-signed certificates:
-# server:
-#   tls:
-#     cert: /etc/tunnel-server/certs/server.crt
-#     key: /etc/tunnel-server/certs/server.key
-
-# =============================================================================
-# SECURITY NOTES
-# =============================================================================
-# - Keep this file secure with proper permissions (640)
-# - Never commit tokens to version control
-# - Use strong, unique tokens for production
-# - Regularly rotate authentication tokens
-# - Use TLS certificates in production environments
-# - Certificate file permissions: 644 (readable by all)
-# - Private key permissions: 640 (readable by tunnel-server group only)
-# - Certificate ownership: root:tunnel-server
-# 
-# Manual permission fix if needed:
-# sudo chmod 644 /etc/tunnel-server/certs/server.crt
-# sudo chmod 640 /etc/tunnel-server/certs/server.key
-# sudo chown root:tunnel-server /etc/tunnel-server/certs/server.*
