@@ -257,8 +257,10 @@ main() {
     echo "  Certificate: $CERTS_DIR/server.crt"
     echo "  Private key: $CERTS_DIR/server.key"
     echo
-    log_info "🌟 YAML Configuration Benefits:"
-    echo "  • Add unlimited custom services (Redis, Elasticsearch, etc.)"
+    log_info "🌟 NEW SECURE ARCHITECTURE:"
+    echo "  • Server only knows ports and client IDs (no air-gapped network topology)"
+    echo "  • Clients control which services are accessible (more secure)"
+    echo "  • Add unlimited custom services without server reconfiguration"
     echo "  • Environment variable overrides: TUNNEL_FORWARDER_<NAME>_PORT=9090"
     echo "  • Better validation and descriptive error messages"
     echo "  • Runtime service enable/disable configuration"

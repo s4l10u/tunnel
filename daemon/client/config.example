@@ -1,6 +1,11 @@
 # Tunnel Client Daemon Configuration
 # Copy this file to /etc/tunnel-client/config and customize for your environment
 
+# NEW SECURE ARCHITECTURE:
+# - Client controls which services are accessible (more secure)
+# - Server only knows ports, not your internal network topology
+# - You have full control over targets from the air-gapped side
+
 # =============================================================================
 # REQUIRED SETTINGS
 # =============================================================================
@@ -14,8 +19,9 @@ TUNNEL_SERVER_URL=wss://tunnel-server.example.com:8443/tunnel
 # Must match the token configured on the tunnel server
 TUNNEL_TOKEN=your-production-token-here
 
-# Port forwarding configuration
-# Format: localPort:remoteHost:remotePort
+# Port forwarding configuration (CLIENT CONTROLS TARGETS)
+# Format: serverPort:localTarget:localPort
+# The server exposes serverPort, client connects to localTarget:localPort
 # Examples:
 #   Kubernetes API: 6443:kubernetes.default.svc.cluster.local:443
 #   Web app: 8080:webapp:80
@@ -24,7 +30,7 @@ TUNNEL_TOKEN=your-production-token-here
 #   MongoDB: 27017:mongodb:27017
 TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443
 
-# Client ID (must be unique and match server configuration)
+# Client ID (must match server forwarder configuration)
 # Examples: airgap-k8s-api, airgap-web, airgap-db, airgap-ssh
 TUNNEL_CLIENT_ID=airgap-k8s-api
 

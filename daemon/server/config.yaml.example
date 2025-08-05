@@ -11,7 +11,6 @@ forwarders:
   # Web Application Tunnel
   - name: "web"
     port: 8080
-    target: "webapp:80"
     client_id: "airgap-web"
     enabled: true
     description: "Web application tunnel"
@@ -19,7 +18,6 @@ forwarders:
   # Database Tunnel
   - name: "database"
     port: 5432
-    target: "database:5432"
     client_id: "airgap-db"
     enabled: false
     description: "PostgreSQL database tunnel"
@@ -27,7 +25,6 @@ forwarders:
   # SSH Access Tunnel
   - name: "ssh"
     port: 2222
-    target: "ssh-server:22"
     client_id: "airgap-ssh"
     enabled: false
     description: "SSH access tunnel"
@@ -35,7 +32,6 @@ forwarders:
   # Kubernetes API Tunnel
   - name: "kubernetes-api"
     port: 6443
-    target: "kubernetes-api:6443"
     client_id: "airgap-k8s-api"
     enabled: false
     description: "Kubernetes API server tunnel"
@@ -43,7 +39,6 @@ forwarders:
   # Redis Cache Tunnel
   - name: "redis"
     port: 6379
-    target: "redis:6379"
     client_id: "airgap-redis"
     enabled: false
     description: "Redis cache tunnel"

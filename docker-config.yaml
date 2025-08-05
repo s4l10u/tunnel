@@ -12,65 +12,57 @@ server:
 forwarders:
   # Web Application Tunnel (Always enabled for demo)
   - name: "web"
-    port: 8080
-    target: "webapp:80"
+    port: 8088
     client_id: "airgap-web"
     enabled: true
-    description: "Web application tunnel - Docker containerized nginx"
+    description: "Web application tunnel - targets are configured on client side"
     
-  # Database Tunnel (Enable with TUNNEL_FORWARDER_DATABASE_ENABLED=true)
+  # Database Tunnel
   - name: "database"
     port: 5432
-    target: "database:5432"
     client_id: "airgap-db"
     enabled: true
-    description: "PostgreSQL database tunnel (uncomment database service in docker-compose.yml)"
+    description: "PostgreSQL database tunnel - targets are configured on client side"
     
-  # SSH Access Tunnel (Enable with TUNNEL_FORWARDER_SSH_ENABLED=true)
+  # SSH Access Tunnel
   - name: "ssh"
     port: 2222
-    target: "ssh-server:22"
     client_id: "airgap-ssh"
     enabled: false
-    description: "SSH access tunnel (uncomment ssh-server service in docker-compose.yml)"
+    description: "SSH access tunnel - targets are configured on client side"
     
-  # MongoDB Tunnel (Enable with TUNNEL_FORWARDER_MONGODB_ENABLED=true)
+  # MongoDB Tunnel
   - name: "mongodb"
     port: 27017
-    target: "mongodb:27017"
     client_id: "airgap-mongodb"
     enabled: false
-    description: "MongoDB database tunnel (add mongodb service to docker-compose.yml)"
+    description: "MongoDB database tunnel - targets are configured on client side"
     
-  # Kubernetes API Server Tunnel (Enable with TUNNEL_FORWARDER_KUBERNETES_API_ENABLED=true)
+  # Kubernetes API Server Tunnel
   - name: "kubernetes-api"
     port: 6443
-    target: "kubernetes-api:6443"
     client_id: "airgap-k8s-api"
     enabled: false
-    description: "Kubernetes API server tunnel (uncomment k8s service in docker-compose.yml)"
+    description: "Kubernetes API server tunnel - targets are configured on client side"
     warning_on_fail: true
     
-  # Redis Cache Tunnel (Enable with TUNNEL_FORWARDER_REDIS_ENABLED=true)
+  # Redis Cache Tunnel
   - name: "redis"
     port: 6379
-    target: "redis:6379"
     client_id: "airgap-redis"
     enabled: false
-    description: "Redis cache tunnel (start with: docker-compose --profile optional up -d)"
+    description: "Redis cache tunnel - targets are configured on client side"
     
-  # Elasticsearch Tunnel (Enable with TUNNEL_FORWARDER_ELASTICSEARCH_ENABLED=true)
+  # Elasticsearch Tunnel
   - name: "elasticsearch"
     port: 9200
-    target: "elasticsearch:9200"
     client_id: "airgap-elasticsearch"
     enabled: false
-    description: "Elasticsearch search tunnel (start with: docker-compose --profile optional up -d)"
+    description: "Elasticsearch search tunnel - targets are configured on client side"
     
-  # Example: Custom Service (Enable with TUNNEL_FORWARDER_CUSTOM_ENABLED=true)
+  # Example: Custom Service
   - name: "custom"
     port: 9999
-    target: "my-custom-app:8080"
     client_id: "airgap-custom"
     enabled: false
-    description: "Example custom service - demonstrates unlimited service capability"
+    description: "Example custom service - targets are configured on client side"

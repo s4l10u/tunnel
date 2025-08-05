@@ -20,7 +20,6 @@ import (
 type ForwarderConfig struct {
 	Name          string `yaml:"name"`
 	Port          int    `yaml:"port"`
-	Target        string `yaml:"target"`
 	ClientID      string `yaml:"client_id"`
 	Enabled       bool   `yaml:"enabled"`
 	Description   string `yaml:"description"`
@@ -35,7 +34,7 @@ type ImprovedServer struct {
 	sessions   *SessionManager
 	upgrader   websocket.Upgrader
 	config     ServerConfig
-	forwarders map[string]string // clientID -> target mapping
+	clientPorts map[string]bool // clientID -> enabled mapping
 }
 
 // ServerConfig holds server configuration
@@ -243,21 +242,21 @@ type ImprovedServerClient struct {
 func NewImprovedServer(logger *zap.Logger, authToken string, forwarders []ForwarderConfig) *ImprovedServer {
 	config := DefaultServerConfig()
 	
-	// Build forwarder mapping from clientID to target
-	forwarderMap := make(map[string]string)
+	// Build client permissions mapping
+	clientPorts := make(map[string]bool)
 	for _, fw := range forwarders {
 		if fw.Enabled {
-			forwarderMap[fw.ClientID] = fw.Target
+			clientPorts[fw.ClientID] = true
 		}
 	}
 	
 	return &ImprovedServer{
-		logger:     logger,
-		authToken:  authToken,
-		clients:    NewClientManager(logger),
-		sessions:   NewSessionManager(logger),
-		config:     config,
-		forwarders: forwarderMap,
+		logger:      logger,
+		authToken:   authToken,
+		clients:     NewClientManager(logger),
+		sessions:    NewSessionManager(logger),
+		config:      config,
+		clientPorts: clientPorts,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // Configure based on security needs
@@ -440,14 +439,13 @@ func (s *ImprovedServer) StartTCPForwarder(port int, clientID string) error {
 func (s *ImprovedServer) handleTCPConnection(conn net.Conn, clientID string, remotePort int) {
 	sessionID := fmt.Sprintf("%s-%d-%d", clientID, remotePort, time.Now().UnixNano())
 	
-	// Determine target from forwarder configuration
-	target, exists := s.forwarders[clientID]
-	if !exists {
-		// Fallback to localhost if no forwarder config found
-		target = fmt.Sprintf("localhost:%d", remotePort)
-		s.logger.Warn("No forwarder config found for client", 
+	// Check if client is authorized for this port
+	if !s.clientPorts[clientID] {
+		s.logger.Warn("Client not authorized for port forwarding", 
 			zap.String("clientID", clientID),
-			zap.String("fallback", target))
+			zap.Int("port", remotePort))
+		conn.Close()
+		return
 	}
 
 	// Get the client
@@ -458,19 +456,19 @@ func (s *ImprovedServer) handleTCPConnection(conn net.Conn, clientID string, rem
 		return
 	}
 
-	// Create session
-	session := s.sessions.Create(sessionID, clientID, target, conn, s.logger)
+	// Create session without specifying target - client will decide
+	session := s.sessions.Create(sessionID, clientID, "", conn, s.logger)
 	
 	s.logger.Info("Starting TCP session", 
 		zap.String("sessionID", sessionID),
 		zap.String("clientID", clientID),
-		zap.String("target", target))
+		zap.Int("remotePort", remotePort))
 
-	// Send connect message to client
+	// Send connect request to client (no target specified - client decides)
 	connectMsg := ForwardMessage{
 		Type:      "connect",
 		SessionID: sessionID,
-		Target:    target,
+		Port:      remotePort, // Tell client which port was accessed
 	}
 
 	if err := s.sendForwardMessageToClient(client, connectMsg); err != nil {

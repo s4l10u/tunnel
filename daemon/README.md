@@ -2,6 +2,14 @@
 
 This directory contains files for installing and managing both tunnel client and server as Linux systemd daemons.
 
+## 🌟 NEW SECURE ARCHITECTURE
+
+**Client-Controlled Targets**: The tunnel now uses a more secure architecture where:
+- **Clients specify targets**: Server only knows ports and client IDs, not your internal network topology
+- **Enhanced security**: Air-gapped network topology remains private from the server
+- **Zero-trust design**: Server has no knowledge of internal services
+- **Client-side access control**: You control which services are accessible through the tunnel
+
 ## 📁 Directory Structure
 
 ```
@@ -36,14 +44,21 @@ sudo ./daemon/client/install-daemon.sh
 # Edit the configuration file
 sudo nano /etc/tunnel-client/config
 
-# Required settings:
+# Required settings (NEW ARCHITECTURE):
 # TUNNEL_SERVER_URL=wss://your-server.com:8443/tunnel  # Use wss:// for TLS
 # TUNNEL_TOKEN=your-production-token
-# TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443
+# TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443  # CLIENT CONTROLS TARGET
 # TUNNEL_CLIENT_ID=airgap-k8s-api
 
 # TLS settings:
 # TUNNEL_SKIP_VERIFY=false  # Set to true for self-signed certificates
+
+# NEW: Client-controlled target format
+# TUNNEL_FORWARD=serverPort:localTarget:localPort
+# Examples:
+#   Web app: TUNNEL_FORWARD=8080:webapp:80
+#   Database: TUNNEL_FORWARD=5432:database:5432
+#   SSH: TUNNEL_FORWARD=2222:ssh-server:22
 ```
 
 ### 3. Start the Service
@@ -72,14 +87,23 @@ sudo ./daemon/server/install-server-daemon.sh
 ### 2. Configure the Server
 
 ```bash
-# Edit the configuration file
+# RECOMMENDED: Edit YAML configuration (modern, flexible)
+sudo nano /etc/tunnel-server/config.yaml
+
+# OR edit legacy environment configuration  
 sudo nano /etc/tunnel-server/config
 
-# Required settings:
+# Required settings (NEW ARCHITECTURE):
 # TUNNEL_LISTEN_ADDR=:8443
 # TUNNEL_TOKEN=your-production-token
 # TUNNEL_CERT_PATH=/etc/tunnel-server/certs/server.crt
 # TUNNEL_KEY_PATH=/etc/tunnel-server/certs/server.key
+
+# NEW: Server only defines ports and client IDs
+# Targets are controlled by clients for security
+# Example forwarder configuration:
+#   Port 8080 -> Client "airgap-web" controls target
+#   Port 5432 -> Client "airgap-db" controls target
 ```
 
 ### 3. Start the Server Service
@@ -172,29 +196,32 @@ sudo -u tunnel /opt/tunnel-client/bin/tunnel-client-linux --help
 sudo systemctl reload tunnel-client
 ```
 
-## 🔧 Configuration Examples
+## 🔧 Configuration Examples (NEW ARCHITECTURE)
 
 ### Kubernetes API Server
 ```bash
+# CLIENT CONTROLS TARGET (more secure)
 TUNNEL_SERVER_URL=wss://tunnel.example.com:8443/tunnel
 TUNNEL_TOKEN=your-k8s-token
-TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443
+TUNNEL_FORWARD=6443:kubernetes.default.svc.cluster.local:443  # Client specifies target
 TUNNEL_CLIENT_ID=airgap-k8s-api
 ```
 
 ### Web Application
 ```bash
+# CLIENT CONTROLS TARGET (server doesn't know about "webapp")
 TUNNEL_SERVER_URL=wss://tunnel.example.com:8443/tunnel
 TUNNEL_TOKEN=your-web-token
-TUNNEL_FORWARD=8080:webapp:80
+TUNNEL_FORWARD=8080:webapp:80  # Client decides target
 TUNNEL_CLIENT_ID=airgap-web
 ```
 
 ### Database
 ```bash
+# CLIENT CONTROLS TARGET (air-gapped topology stays private)
 TUNNEL_SERVER_URL=wss://tunnel.example.com:8443/tunnel
 TUNNEL_TOKEN=your-db-token
-TUNNEL_FORWARD=5432:database:5432
+TUNNEL_FORWARD=5432:database:5432  # Client controls which database
 TUNNEL_CLIENT_ID=airgap-db
 ```
 
@@ -316,11 +343,18 @@ sudo journalctl -u tunnel-client | grep -i "metrics"
 
 The daemon runs with enhanced security:
 
+### System Security
 - **Non-root user**: Runs as dedicated `tunnel` user
 - **Minimal privileges**: No new privileges, restricted system calls
 - **Filesystem protection**: Read-only root filesystem, private /tmp
 - **Resource limits**: Memory and CPU limits enforced
 - **Automatic restart**: Restarts on failure with backoff
+
+### Architecture Security (NEW)
+- **Client-controlled targets**: Server has no knowledge of internal services
+- **Zero-trust tunnel design**: Air-gapped network topology remains private
+- **Client-side access control**: You control which services are accessible
+- **Reduced attack surface**: Server cannot be used to discover internal services
 
 ## 📊 Monitoring Integration
 

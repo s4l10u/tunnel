@@ -64,11 +64,25 @@ func main() {
 		
 		client := tunnel.NewImprovedClient(config)
 		
-		// For the improved client, we don't need to set up port forwarders
-		// The server will send connect messages when external connections come in
+		// Parse forward configuration for improved client
 		if *forward != "" {
-			logger.Info("Forward configuration noted (server-initiated connections)", 
-				zap.String("forward", *forward))
+			// Parse format: "8088:target:443"
+			parts := strings.Split(*forward, ":")
+			if len(parts) == 3 {
+				if port, err := strconv.Atoi(parts[0]); err == nil {
+					target := parts[1] + ":" + parts[2]
+					config.PortMappings[port] = target
+					logger.Info("Configured port mapping", 
+						zap.Int("port", port),
+						zap.String("target", target))
+				} else {
+					logger.Error("Invalid port in forward configuration", 
+						zap.String("forward", *forward))
+				}
+			} else {
+				logger.Error("Invalid forward configuration format, expected port:host:port", 
+					zap.String("forward", *forward))
+			}
 		}
 		
 		// Show metrics periodically if requested

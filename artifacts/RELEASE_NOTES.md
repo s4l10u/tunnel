@@ -1,4 +1,4 @@
-# Tunnel System Release v1.2.2
+# Tunnel System Release v1.2.3
 
 Secure tunnel system for establishing connections between air-gapped environments and external networks.
 
@@ -30,7 +30,7 @@ curl -fsSL https://github.com/s4l10u/tunnel/releases/latest/download/install-ser
 |------|-------------|
 | `install-client.sh` | One-line client installer |
 | `install-server.sh` | One-line server installer |
-| `tunnel-v1.2.2-\<os\>-\<arch\>.tar.gz` | Binary archives for each platform |
+| `tunnel-v1.2.3-\<os\>-\<arch\>.tar.gz` | Binary archives for each platform |
 | `daemon.tar.gz` | Daemon installation files |
 | `checksums.txt` | SHA256 checksums for verification |
 
@@ -78,7 +78,7 @@ sha256sum -c checksums.txt
 - [Installation Guide](README.md)
 - [TLS Setup](TLS-SETUP.md)
 
-## 🆕 What's New in v1.2.2
+## 🆕 What's New in v1.2.3
 
 - Separated daemon installations for client and server
 - One-line installation scripts

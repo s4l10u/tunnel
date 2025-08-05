@@ -111,7 +111,6 @@ func loadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	config.Server.TLS.Key = expandEnvVars(config.Server.TLS.Key)
 	
 	for i := range config.Forwarders {
-		config.Forwarders[i].Target = expandEnvVars(config.Forwarders[i].Target)
 		config.Forwarders[i].ClientID = expandEnvVars(config.Forwarders[i].ClientID)
 		
 		// Apply environment variable overrides
@@ -123,9 +122,7 @@ func loadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 			}
 		}
 		
-		if target := os.Getenv(envPrefix + "TARGET"); target != "" {
-			config.Forwarders[i].Target = target
-		}
+		// Target configuration removed - handled by client
 		
 		if enabledStr := os.Getenv(envPrefix + "ENABLED"); enabledStr != "" {
 			if enabled, err := strconv.ParseBool(enabledStr); err == nil {
@@ -164,17 +161,14 @@ func validateConfig(config *Config, logger *zap.Logger) []tunnel.ForwarderConfig
 			continue
 		}
 		
-		if forwarder.Target == "" {
-			logger.Error("Target not specified", zap.String("name", forwarder.Name))
-			continue
-		}
+		// Target validation removed - handled by client
 		
 		usedPorts[forwarder.Port] = true
 		validForwarders = append(validForwarders, forwarder)
 		logger.Info("Validated forwarder", 
 			zap.String("name", forwarder.Name),
 			zap.Int("port", forwarder.Port),
-			zap.String("target", forwarder.Target))
+			zap.String("clientID", forwarder.ClientID))
 	}
 	
 	return validForwarders
@@ -194,14 +188,14 @@ func startTCPForwarders(server any, configs []tunnel.ForwarderConfig, logger *za
 						logger.Error("Failed to start forwarder", 
 							zap.String("name", config.Name), 
 							zap.Int("port", config.Port), 
-							zap.String("target", config.Target),
+							zap.String("clientID", config.ClientID),
 							zap.Error(err))
 					}
 				} else {
 					logger.Info("Started TCP forwarder", 
 						zap.String("name", config.Name),
 						zap.Int("port", config.Port), 
-						zap.String("target", config.Target),
+						zap.String("clientID", config.ClientID),
 						zap.String("description", config.Description))
 				}
 			}
@@ -212,7 +206,7 @@ func startTCPForwarders(server any, configs []tunnel.ForwarderConfig, logger *za
 					logger.Info("Started TCP forwarder", 
 						zap.String("name", config.Name),
 						zap.Int("port", config.Port),
-						zap.String("target", config.Target))
+						zap.String("clientID", config.ClientID))
 				}(config)
 			}
 		}

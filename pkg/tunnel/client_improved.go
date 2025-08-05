@@ -33,6 +33,7 @@ type ImprovedClientConfig struct {
 	ReadBufferSize     int
 	WriteBufferSize    int
 	EnableCompression  bool
+	PortMappings       map[int]string // port -> target mapping
 }
 
 // DefaultImprovedClientConfig returns default client configuration
@@ -50,6 +51,7 @@ func DefaultImprovedClientConfig(serverURL, authToken, clientID string, logger *
 		ReadBufferSize:    1024 * 1024, // 1MB
 		WriteBufferSize:   1024 * 1024, // 1MB
 		EnableCompression: true,
+		PortMappings:      make(map[int]string), // Initialize empty mapping
 	}
 }
 
@@ -654,11 +656,33 @@ func (c *ImprovedClient) handleForwardMessage(data json.RawMessage) {
 
 // handleRemoteConnect handles connection request from server
 func (c *ImprovedClient) handleRemoteConnect(msg *ForwardMessage) {
+	// Determine target based on port mapping configured by client
+	target, exists := c.config.PortMappings[msg.Port]
+	if !exists {
+		c.config.Logger.Error("No target configured for port",
+			zap.Int("port", msg.Port),
+			zap.String("sessionID", msg.SessionID))
+
+		// Send error back
+		errMsg := ForwardMessage{
+			Type:      "error",
+			SessionID: msg.SessionID,
+			Error:     fmt.Sprintf("no target configured for port %d", msg.Port),
+		}
+		c.sendForwardMessage(errMsg)
+		return
+	}
+
+	c.config.Logger.Info("Connecting to local service",
+		zap.Int("port", msg.Port),
+		zap.String("target", target),
+		zap.String("sessionID", msg.SessionID))
+
 	// Connect to local service
-	conn, err := net.DialTimeout("tcp", msg.Target, 10*time.Second)
+	conn, err := net.DialTimeout("tcp", target, 10*time.Second)
 	if err != nil {
 		c.config.Logger.Error("Failed to connect to local service",
-			zap.String("target", msg.Target),
+			zap.String("target", target),
 			zap.Error(err))
 
 		// Send error back
@@ -672,11 +696,11 @@ func (c *ImprovedClient) handleRemoteConnect(msg *ForwardMessage) {
 	}
 
 	// Create session
-	session := c.sessions.Create(msg.SessionID, conn, msg.Target, c)
+	session := c.sessions.Create(msg.SessionID, conn, target, c)
 
 	c.config.Logger.Info("Connected to local service",
 		zap.String("sessionID", msg.SessionID),
-		zap.String("target", msg.Target))
+		zap.String("target", target))
 
 	// Send success response
 	successMsg := ForwardMessage{

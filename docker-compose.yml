@@ -1,5 +1,11 @@
 version: '3.8'
 
+# NEW SECURE ARCHITECTURE:
+# - Server only knows ports and client IDs (no air-gapped network topology)
+# - Clients specify targets using -forward=port:target:port 
+# - More secure: server has no knowledge of internal services
+# - More flexible: client controls which services are accessible
+
 networks:
   # External network (internet-facing)
   external-network:
@@ -17,7 +23,7 @@ networks:
         - subnet: 172.22.0.0/24
 
 services:
-  # Tunnel server (internet-facing) - NEW: YAML Configuration
+  # Tunnel server (internet-facing) - NEW ARCHITECTURE: Port-only configuration
   tunnel-server:
     build:
       context: .
@@ -27,40 +33,28 @@ services:
       - external-network
     ports:
       - "8443:8443"  # WebSocket tunnel server
-      - "8080:8080"  # Web app tunnel
-      - "5432:5432"  # Database tunnel
-      - "2222:2222"  # SSH tunnel
-      - "27017:27017"  # MongoDB tunnel
-      - "6443:6443"  # Kubernetes API server tunnel
-      # Optional services (enable via environment variables)
-      - "6379:6379"  # Redis tunnel (enable with TUNNEL_FORWARDER_REDIS_ENABLED=true)
-      - "9200:9200"  # Elasticsearch tunnel (enable with TUNNEL_FORWARDER_ELASTICSEARCH_ENABLED=true)
+      - "8088:8088"  # Web app tunnel (target decided by client)
+      - "5432:5432"  # Database tunnel (target decided by client)
+      - "2222:2222"  # SSH tunnel (target decided by client)
+      - "27017:27017"  # MongoDB tunnel (target decided by client)
+      - "6443:6443"  # Kubernetes API server tunnel (target decided by client)
+      # Optional services
+      - "6379:6379"  # Redis tunnel (target decided by client)
+      - "9200:9200"  # Elasticsearch tunnel (target decided by client)
     environment:
       # Core Configuration
       - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
       - USE_IMPROVED=${USE_IMPROVED:-true}
       
-      # Service Targets (used by YAML config)
-      - TARGET_WEB=${TARGET_WEB:-webapp:80}
-      - TARGET_DB=${TARGET_DB:-database:5432}
-      - TARGET_SSH=${TARGET_SSH:-ssh-server:22}
-      - TARGET_MONGODB=${TARGET_MONGODB:-ss-mongodb-0.mongodb:27017}
-      - TARGET_K8S_API=${TARGET_K8S_API:-kubernetes-api:6443}
-      - TARGET_REDIS=${TARGET_REDIS:-redis:6379}
-      - TARGET_ELASTICSEARCH=${TARGET_ELASTICSEARCH:-elasticsearch:9200}
-      
       # TLS Configuration
       - TLS_CERT_PATH=${TLS_CERT_PATH:-}
       - TLS_KEY_PATH=${TLS_KEY_PATH:-}
       
-      # Optional Service Controls (NEW: Runtime enable/disable)
+      # Optional Service Controls (Runtime enable/disable)
       - TUNNEL_FORWARDER_REDIS_ENABLED=${ENABLE_REDIS:-false}
       - TUNNEL_FORWARDER_ELASTICSEARCH_ENABLED=${ENABLE_ELASTICSEARCH:-false}
       
-      # Optional Port Overrides (NEW: Runtime configuration)
-      # - TUNNEL_FORWARDER_WEB_PORT=8080
-      # - TUNNEL_FORWARDER_DATABASE_PORT=5432
-      # - TUNNEL_FORWARDER_REDIS_PORT=6379
+      # NOTE: Target configurations removed - now handled by clients for security
     volumes:
       - ./certs:/certs:ro
       - ./docker-config.yaml:/app/config.yaml:ro  # NEW: YAML configuration
@@ -71,16 +65,8 @@ services:
       timeout: 5s
       retries: 3
 
-  database-client:
-    image: postgres:15-alpine
-    container_name: extern-database
-    networks:
-      - external-network
-    environment:
-      - POSTGRES_PASSWORD=airgapped-password
-      - POSTGRES_USER=airgapped
-      - POSTGRES_DB=airgapped_db
   # Tunnel client for web app
+  # NEW ARCHITECTURE: Client specifies targets, server only knows ports
   tunnel-client-web:
     build:
       context: .
@@ -97,30 +83,31 @@ services:
     command:
       - "-server=ws://tunnel-server:8443/tunnel"
       - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
-      - "-forward=8080:webapp:80"
+      - "-forward=8088:nginx-webapp:80"  # Client controls target (webapp:80)
       - "-id=airgap-web"
       - "-improved=${USE_IMPROVED:-true}"
 
   # Tunnel client for database
-  tunnel-client-db:
-    build:
-      context: .
-      dockerfile: Dockerfile.client
-    container_name: tunnel-client-db
-    networks:
-      - external-network
-      - airgapped-network
-    depends_on:
-      tunnel-server:
-        condition: service_healthy
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
-    command:
-      - "-server=ws://tunnel-server:8443/tunnel"
-      - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
-      - "-forward=5432:database:5432"
-      - "-id=airgap-db"
-      - "-improved=${USE_IMPROVED:-true}"
+  # Client decides target (database:5432), server only exposes port 5432
+  # tunnel-client-db:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.client
+  #   container_name: tunnel-client-db
+  #   networks:
+  #     - external-network
+  #     - airgapped-network
+  #   depends_on:
+  #     tunnel-server:
+  #       condition: service_healthy
+  #   environment:
+  #     - TUNNEL_TOKEN=${TUNNEL_TOKEN:-your-secure-production-token-here}
+  #   command:
+  #     - "-server=ws://tunnel-server:8443/tunnel"
+  #     - "-token=${TUNNEL_TOKEN:-your-secure-production-token-here}"
+  #     - "-forward=5432:database:5432"  # Client controls target (database:5432)
+  #     - "-id=airgap-db"
+  #     - "-improved=${USE_IMPROVED:-true}"
 
   # Tunnel client for SSH
   # tunnel-client-ssh:
@@ -167,26 +154,26 @@ services:
   # Example air-gapped services
   
   # Web application in air-gapped network
-  webapp:
+  nginx-webapp:
     image: nginx:alpine
-    container_name: airgapped-webapp
+    container_name: nginx-webapp
     networks:
       - airgapped-network
     volumes:
       - ./examples/webapp:/usr/share/nginx/html:ro
     
   # Database in air-gapped network  
-  database:
-    image: postgres:15-alpine
-    container_name: airgapped-database
-    networks:
-      - airgapped-network
-    environment:
-      - POSTGRES_PASSWORD=airgapped-password
-      - POSTGRES_USER=airgapped
-      - POSTGRES_DB=airgapped_db
-    volumes:
-      - db-data:/var/lib/postgresql/data
+  # database:
+  #   image: postgres:15-alpine
+  #   container_name: airgapped-database
+  #   networks:
+  #     - airgapped-network
+  #   environment:
+  #     - POSTGRES_PASSWORD=airgapped-password
+  #     - POSTGRES_USER=airgapped
+  #     - POSTGRES_DB=airgapped_db
+  #   volumes:
+  #     - db-data:/var/lib/postgresql/data
 
   # # SSH server in air-gapped network
   # ssh-server:
@@ -252,14 +239,14 @@ services:
   #     - optional  # Only start when explicitly requested
 
   # External user simulation (can only access through tunnel)
-  external-user:
-    image: curlimages/curl:latest
-    container_name: external-user
-    networks:
-      - external-network
-    command: /bin/sh -c "while true; do sleep 3600; done"
-    depends_on:
-      - tunnel-server
+  # external-user:
+  #   image: curlimages/curl:latest
+  #   container_name: external-user
+  #   networks:
+  #     - external-network
+  #   command: /bin/sh -c "while true; do sleep 3600; done"
+  #   depends_on:
+  #     - tunnel-server
 
   # Traffic monitoring container
   # traffic-monitor:

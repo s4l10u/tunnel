@@ -156,14 +156,26 @@ main() {
     install_config
     install_service
     
-    log_success "Installation completed successfully!"
+    log_success "🎉 Installation completed successfully!"
     echo
-    log_info "Next steps:"
-    echo "1. Edit configuration: sudo nano $CONFIG_DIR/config"
-    echo "2. Enable service: sudo systemctl enable $SERVICE_NAME"
-    echo "3. Start service: sudo systemctl start $SERVICE_NAME"
-    echo "4. Check status: sudo systemctl status $SERVICE_NAME"
-    echo "5. View logs: sudo journalctl -u $SERVICE_NAME -f"
+    log_info "📋 Next steps:"
+    echo "1. 🔧 Edit configuration: sudo nano $CONFIG_DIR/config"
+    echo "2. 🔄 Enable service: sudo systemctl enable $SERVICE_NAME"
+    echo "3. ▶️  Start service: sudo systemctl start $SERVICE_NAME"
+    echo "4. 📊 Check status: sudo systemctl status $SERVICE_NAME"
+    echo "5. 📜 View logs: sudo journalctl -u $SERVICE_NAME -f"
+    echo
+    log_info "🌟 NEW SECURE ARCHITECTURE:"
+    echo "  • CLIENT CONTROLS TARGETS: You specify which services are accessible"
+    echo "  • Server only knows ports, not your internal network topology"
+    echo "  • More secure: server has no knowledge of internal services"
+    echo "  • Format: TUNNEL_FORWARD=serverPort:localTarget:localPort"
+    echo "  • Example: TUNNEL_FORWARD=8080:webapp:80"
+    echo
+    log_info "🔐 Security Benefits:"
+    echo "  • Air-gapped network topology remains private"
+    echo "  • Client-side access control"
+    echo "  • Zero-trust tunnel architecture"
 }
 
 # Run main function
