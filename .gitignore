@@ -1,0 +1,120 @@
+# Tunnel System .gitignore
+
+# Binaries
+bin/
+build/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+*.test
+*.out
+go.work
+go.work.sum
+
+# Build directories (keep release artifacts for publishing)
+# artifacts/  # Commented - needed for GitHub releases
+releases/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Configuration files with secrets
+config.local.yaml
+config.production.yaml
+*-local.yaml
+*-prod.yaml
+
+# TLS certificates and keys
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+certs/
+tls/
+
+# Logs
+*.log
+logs/
+log/
+
+# Docker volumes and data
+docker-data/
+volumes/
+
+# Kubernetes secrets and sensitive configs
+k8s/*secret*.yaml
+k8s/*-secret.yaml
+k8s/secret.yaml
+
+# Testing
+coverage.txt
+coverage.html
+test-results/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor backup files
+*~
+*.bak
+*.backup
+
+# Runtime files
+*.pid
+*.sock
+
+# Dependency directories
+vendor/
+node_modules/
+
+# Git merge files
+*.orig
+
+# SSH keys
+id_rsa
+id_rsa.pub
+*.ssh
+
+# Sensitive daemon configs
+daemon/*/config
+daemon/*/config.local
+daemon/*/config.production
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Miscellaneous
+.cache/
+.tmp/
+tmp/
